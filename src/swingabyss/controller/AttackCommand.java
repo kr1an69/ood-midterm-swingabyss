@@ -17,6 +17,10 @@ public class AttackCommand implements ICommand {
 
     @Override
     public void execute() {
-        // TODO: Logic xử lý tấn công. VD: target.takeDamage(attacker_damage);
+        if (!attacker.isDead() && !target.isDead()) {
+            System.out.println("[CMD] " + attacker.getName() + " tan cong " + target.getName() + "!");
+            int damage = attacker.getStats().getAttack();
+            target.takeDamage(damage);
+        }
     }
 }

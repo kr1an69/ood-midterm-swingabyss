@@ -12,3 +12,6 @@ Thumbs.db
 # IDE/AI specific
 .vscode/
 .gemini/
+
+*.md
+!README.md

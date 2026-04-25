@@ -1,6 +1,7 @@
 # 📂 MASTER CONTEXT FILE: SWING INTO THE ABYSS
-**Ngày cập nhật:** 19/04/2026 (Lần 2 — sau khi hoàn thành Giai đoạn 2)
+**Ngày cập nhật:** 25/04/2026 (Lần 3 — sau khi hoàn thành Giai đoạn 3: Core Logic)
 **Sinh viên:** Trần Tuấn Anh – 24130016 – DH24DTD
+**Repository (GitHub):** https://github.com/kr1an69/ood-midterm-swingabyss
 **Mục đích file này:** Context Preservation cho mọi AI Agent tham gia dự án. Đọc **toàn bộ** file này trước khi làm bất cứ điều gì. Mọi quyết định kiến trúc ở đây đã được xác nhận và KHÔNG được thay đổi tùy tiện.
 
 ---
@@ -25,17 +26,17 @@ SwingIntoTheAbyss/
 ├── src/swingabyss/                  ← Root package
 │   ├── Main.java                    ✅ DONE — Composition Root, SwingUtilities.invokeLater
 │   ├── utils/
-│   │   ├── Constants.java           ✅ DONE — mọi hằng số, path asset, frame config
+│   │   ├── Constants.java           ✅ DONE — hằng số, path asset, frame 1280x720
 │   │   └── SpriteLoader.java        ✅ DONE — Singleton + Flyweight + Nearest-Neighbor
 │   ├── view/
-│   │   ├── MainFrame.java           ✅ DONE — JFrame 800×560, fixed size, CENTER + SOUTH layout
-│   │   ├── GamePanel.java           ✅ DONE — arena rendering: bg + sprites + HP bar + HUD
-│   │   ├── NineSlicePanel.java      ✅ DONE — thuật toán 9-slice đầy đủ với BufferedImage
-│   │   ├── UIPanel.java             ✅ DONE — action bar parchment + 4 slot buttons
-│   │   └── SpriteAnimator.java      ✅ DONE — Swing Timer, frame cycling, flip support
-│   ├── model/                       ⬜ CHƯA LÀM — Entity, Hero, Monster, Stats, Observer
-│   ├── controller/                  ⬜ CHƯA LÀM — ICommand, AttackCommand, CommandQueue
-│   ├── manager/                     ⬜ CHƯA LÀM — TurnManager (FSM với GameState enum)
+│   │   ├── MainFrame.java           ✅ DONE — JFrame 1280x720, fixed size
+│   │   ├── GamePanel.java           ✅ DONE — arena rendering
+│   │   ├── NineSlicePanel.java      ✅ DONE — thuật toán 9-slice
+│   │   ├── UIPanel.java             ✅ DONE — action bar parchment
+│   │   └── SpriteAnimator.java      ✅ DONE — Swing Timer, frame cycling
+│   ├── model/                       ✅ DONE — Entity, Hero, Monster, Stats, Observer
+│   ├── controller/                  ✅ DONE — ICommand, Attack, Defend, Heal Command
+│   ├── manager/                     ✅ DONE — TurnManager (FSM), GameState
 │   └── factory/                     ⬜ CHƯA LÀM — MonsterFactory, RewardFactory
 ├── assets/                          ✅ DEPLOYED — Đây là folder chứa assets THỰC TẾ dùng trong game
 │   ├── heroes/
@@ -90,13 +91,13 @@ SwingIntoTheAbyss/
 |---------|----------------------|-------|
 | **Singleton** | `SpriteLoader` | ✅ DONE — Instance duy nhất để cache ảnh |
 | **Flyweight** | `SpriteLoader.cache` | ✅ DONE — HashMap cache tránh đọc disk lại |
-| **Observer** | `Entity` → `GamePanel` | ⬜ PENDING — Entity.notifyObservers() → GamePanel.onNotify() → repaint() |
-| **Command** | `ICommand`, `AttackCommand`, `CommandQueue` | ⬜ PENDING — UIPanel buttons dispatch Command objects |
-| **State/FSM** | `TurnManager`, `GameState` enum | ⬜ PENDING — FSM điều phối lượt đánh |
-| **Strategy** | `Skill` (tương lai) | ⬜ PENDING — Kỹ năng nhân vật có thể hoán đổi |
-| **Factory** | `MonsterFactory`, `RewardFactory` | ⬜ PENDING — Sinh monster/reward ngẫu nhiên theo Wave |
-| **Composition over Inheritance** | Toàn bộ | ⬜ Đảm bảo khi implement model |
-| **MVC** | `model/` ↔ `controller/` ↔ `view/` | ⬜ PENDING — View KHÔNG được chứa game logic |
+| **Observer** | `Entity` → `Observer` | ✅ DONE — Entity.notifyObservers() kích hoạt cập nhật UI |
+| **Command** | `ICommand`, `AttackCommand`... | ✅ DONE — Đóng gói logic đánh/thủ/hồi máu |
+| **State/FSM** | `TurnManager`, `GameState` | ✅ DONE — FSM điều phối vòng lặp game hoàn chỉnh |
+| **Strategy** | `ISkill` | ✅ DONE (Khung) — Hero chứa List<ISkill> để đổi chiêu |
+| **Composition** | `Stats` ghép vào `Entity` | ✅ DONE — Tách thuộc tính tĩnh khỏi logic động |
+| **Factory** | `MonsterFactory` | ⬜ PENDING — Sinh monster ngẫu nhiên theo Wave |
+| **MVC** | `model/` ↔ `controller/` | ✅ DONE — Tách rời logic cốt lõi khỏi View |
 
 ### Sequence Flow đã được thiết kế (từ `Sequence_Diagram.puml`):
 ```
@@ -148,7 +149,7 @@ SwingUtilities.invokeLater(() -> {
 Đây là Composition Root. Tất cả ghép nối giữa View-Model-Controller phải xảy ra tại đây khi phases sau được implement.
 
 ### `MainFrame.java`
-- JFrame 800×560, `setResizable(false)`, `setLocationRelativeTo(null)` (center màn hình).
+- JFrame 1280x720, `setResizable(false)`, `setLocationRelativeTo(null)` (center màn hình).
 - Layout: `BorderLayout` — `GamePanel` ở CENTER (450px), `UIPanel` ở SOUTH (110px).
 - UIPanel wrapped trong `JPanel` có `EmptyBorder(4,8,8,8)` để "float" off edge.
 
@@ -199,89 +200,70 @@ SwingUtilities.invokeLater(() -> {
 ## 7. TRẠNG THÁI TIẾN ĐỘ HIỆN TẠI
 
 ```
-GIAI ĐOẠN 1 — Setup & Mockup GUI        ✅ HOÀN THÀNH
+GIAI ĐOẠN 1 — Setup & Mockup GUI                 ✅ HOÀN THÀNH
 GIAI ĐOẠN 2 — Asset Integration + UI Algorithms  ✅ HOÀN THÀNH
-GIAI ĐOẠN 3 — Logic & OOD Patterns       ⬜ CHƯA BẮT ĐẦU
-GIAI ĐOẠN 4 — Polish & Final             ⬜ CHƯA BẮT ĐẦU
+GIAI ĐOẠN 3 — Logic Core & OOD Patterns          ✅ HOÀN THÀNH (MỚI)
+GIAI ĐOẠN 4 — UI Polish & Final Integration      ⬜ CHƯA BẮT ĐẦU
 ```
 
-### Chi tiết Giai đoạn 2 đã hoàn thành (15/04/2026):
-- [x] Copy 13 assets từ `stolen/` → `assets/` (đúng cấu trúc)
-- [x] `utils/Constants.java` — tất cả config tập trung
-- [x] `utils/SpriteLoader.java` — Singleton + Flyweight + Nearest-Neighbor
-- [x] `view/SpriteAnimator.java` — animation với Swing Timer
-- [x] `view/NineSlicePanel.java` — thuật toán 9-slice thực sự
-- [x] `view/UIPanel.java` — parchment UI với assets thực
-- [x] `view/GamePanel.java` — full rendering pipeline
-- [x] Fix bug `bg_tiles`: loại khỏi background, thay bằng `GradientPaint`
-- [x] `UI_Algorithm.md` — tài liệu kỹ thuật đầy đủ các thuật toán
+### Chi tiết Giai đoạn 3 đã hoàn thành (25/04/2026):
+- **Giai đoạn 3A (Model):** 
+  - Tạo `Stats` bằng **Composition** để chứa các thuộc tính tĩnh.
+  - Implement **Observer Pattern** cho `Entity` (mỗi khi mất máu/hồi máu đều gọi `notifyObservers()`).
+  - Tạo `ISkill` (**Strategy Pattern**) dọn đường cho các hệ thống kỹ năng phức tạp sau này.
+- **Giai đoạn 3B (Controller):**
+  - Implement **Command Pattern** với `AttackCommand`, `DefendCommand` (buff 5 giáp), `HealCommand` (có giới hạn Charge).
+- **Giai đoạn 3C (Manager - FSM):**
+  - Implement **TurnManager** hoạt động như một cỗ máy trạng thái (FSM) xoay vòng từ `CHECK_TURN` -> `HERO_ACTION` / `MONSTER_ACTION`.
+  - Bổ sung luồng Main Menu (`MAIN_MENU` -> `START_WAVE` -> ... -> `REWARD_PHASE` / `GAME_OVER`).
+  - **Đột phá Thuật toán Lượt đánh:** Giải quyết bài toán Honkai Star Rail UI & Xóa xác chết động (Dynamic Dead Entity Filtering).
 
 ---
 
-## 8. VIỆC CẦN LÀM (GIAI ĐOẠN 3 — LOGIC)
+## 8. THUẬT TOÁN VÀ LOGIC NỔI BẬT ĐÃ GIẢI QUYẾT (GIAI ĐOẠN 3)
 
-### Bước 3A — Tạo Model layer
-**Package:** `swingabyss.model`
+### Thuật toán Lọc Xác Chết Động (Dynamic Dead Entity Filtering)
+Bài toán: *Làm sao để khi Hero đánh chết Monster A, Monster A lập tức bốc hơi khỏi thanh hiển thị Lượt sắp tới (Turn Order UI) mà không cần code xóa phức tạp?*
+- **Cách giải quyết:** 
+  1. Khi Monster A hết máu, hàm `takeDamage` gọi `notifyObservers()`.
+  2. `GamePanel` (UI) nhận tín hiệu, lập tức tiến hành vẽ lại màn hình.
+  3. Trong lúc vẽ lại, UI gọi hàm `TurnManager.getUpcomingTurns(count)`.
+  4. Hàm `getUpcomingTurns` được thiết kế cực kỳ thông minh: Quét qua mảng `turnOrder` và nối mảng (Lookahead algorithm), nhưng CỨ ĐỤNG TỚI ai có `isDead() == true` thì vòng lặp tự động **Skip** (nhảy cóc).
+  5. Kết quả: Xác chết không bao giờ được trả về cho UI. UI tự dồn người lên trước. Hoàn hảo và sạch sẽ tuyệt đối.
 
+---
+
+## 9. ROADMAP GIAI ĐOẠN 4 — UI POLISH VÀ TÍCH HỢP
+
+Ở Giai đoạn cuối cùng này, chúng ta sẽ đắp da đắp thịt cho game bằng việc nối Core Logic (vừa làm ở Gđ3) vào Swing UI. Các quyết định thiết kế UX/UI sau đây đã được User chốt cứng:
+
+### 9.1 Hệ thống Luồng Game (Flow Menu)
+- Mở game lên sẽ không nhảy vào đánh nhau ngay. Cần có giao diện **Main Menu** với 2 nút: `Start Game` và `About`.
+- Trong combat, chỉ có 2 nút hệ thống: `Surrender` (Back về Menu) và `Restart` (Chơi lại vòng mới ngay lập tức).
+
+### 9.2 Hệ thống Tooltip (Box Mô Tả Nút Bấm)
+- Không dùng tooltip mặc định của Windows.
+- Sẽ bắt sự kiện `MouseListener` (Hover). Khi chuột đưa vào nút `Heal` hoặc `Attack`, `UIPanel` sẽ tự tay vẽ (`Graphics2D.drawString`) một khung giấy da (parchment box) nổi lên cung cấp thông tin kỹ năng (Sát thương, Lượt sạc, v.v.).
+
+### 9.3 Hệ thống Bảng Thông Số Quái (Enemy Info Box)
+- Sử dụng phong cách **Darkest Dungeon**.
+- Góc trên màn hình sẽ có một Box tĩnh. Khi người chơi Hover/Click vào một quái vật, Box này sẽ cập nhật ngay Tên, HP, Attack, Defense của quái đó.
+
+### 9.4 Thanh Thứ Tự Đánh (Honkai Star Rail Turn Order)
+- Sử dụng dữ liệu từ hàm `getUpcomingTurns(count)`.
+- Hiển thị danh sách 4-5 nhân vật sẽ hành động tiếp theo (theo hàng dọc bên trái hoặc hàng ngang giữa màn hình). Icon quái chết sẽ tự động bốc hơi nhờ thuật toán Lọc đã giải quyết.
+
+### 9.5 Chỉ báo Trực quan (Visual Markers)
+- **Turn Indicator:** Có một dấu mũi tên hoặc vòng sáng nhấp nháy trên đầu Hero/Monster đang tới lượt.
+- **Target Indicator:** Khi đang chọn mục tiêu đánh, Hover chuột vào quái nào thì đầu quái đó hiện Mũi Tên Đỏ (Red Crosshair) để chống bấm nhầm.
+
+### 9.6 Tích Hợp Command vào ActionButton
 ```java
-// Cần tạo (dựa trên Class_Diagram.puml):
-interface IEntity         { takeDamage(int); boolean isDead(); }
-interface Observer        { onNotify(Entity entity); }  // đặt trong view hoặc utils
-abstract class Entity implements IEntity {
-    String name;
-    int maxHp, currentHp, speed;
-    List<Observer> observers;
-    void addObserver(Observer o);
-    void notifyObservers();            // ← gọi sau mỗi takeDamage
-}
-class Hero extends Entity    { /* skills list */ }
-class Monster extends Entity { /* wave tier */ }
-class Stats                  { /* combat calculations */ }
-```
-
-**Quan trọng:** `notifyObservers()` phải được gọi bên trong `takeDamage()` sau khi HP thay đổi.
-
-### Bước 3B — Controller — Command Pattern
-**Package:** `swingabyss.controller`
-
-```java
-interface ICommand { void execute(); }
-class AttackCommand implements ICommand {
-    Entity attacker, target;
-    void execute() { target.takeDamage(calcDamage()); }
-}
-class DefendCommand implements ICommand { ... }
-class SkillCommand implements ICommand { ... }
-// CommandQueue: Queue<ICommand> trong TurnManager
-```
-
-### Bước 3C — TurnManager — State Machine
-**Package:** `swingabyss.manager`
-
-```java
-enum GameState { START_WAVE, CHECK_TURN, HERO_ACTION, MONSTER_ACTION, END_WAVE }
-
-class TurnManager {
-    GameState currentState;
-    List<Hero> heroes;
-    List<Monster> monsters;
-    Queue<ICommand> commandQueue;
-    
-    void processNextTurn();   // switch(currentState) { case HERO_ACTION: ... }
-    void changeState(GameState s);
-}
-```
-
-### Bước 3D — Kết nối GamePanel với Observer
-`GamePanel implements Observer` (đã có trong Class_Diagram.puml):
-```java
-@Override
-public void onNotify(Entity entity) {
-    // Entity đã update xong HP → chỉ cần trigger vẽ lại
-    repaint();
-}
-```
-HP sẽ đọc từ entity thực tế, không còn dùng mock data `hpWizard = {80, 100}`.
+// Trong UIPanel:
+btnAttack.addActionListener(e -> {
+    Entity target = turnManager.getSelectedTarget();
+    turnManager.pushCommand(new AttackCommand(currentHero, target));
+});
 
 ---
 
