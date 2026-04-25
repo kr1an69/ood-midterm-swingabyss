@@ -1,0 +1,14 @@
+# Compiled class files
+bin/
+*.class
+
+# Folder chứa reference assets theo yêu cầu
+stolen/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE/AI specific
+.vscode/
+.gemini/
