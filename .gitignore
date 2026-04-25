@@ -2,7 +2,7 @@
 bin/
 *.class
 
-# Folder chứa reference assets theo yêu cầu
+# Ref assets
 stolen/
 
 # OS generated files
