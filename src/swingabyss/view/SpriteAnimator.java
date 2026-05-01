@@ -112,6 +112,15 @@ public class SpriteAnimator {
     public BufferedImage getCurrentFrame() {
         return frames[currentFrame];
     }
+    
+    /**
+     * Returns a specific static frame image (e.g. 0 for idle).
+     */
+    public BufferedImage getFrame(int index) {
+        if (frames == null || frames.length == 0) return null;
+        if (index >= 0 && index < frames.length) return frames[index];
+        return frames[0];
+    }
 
     /**
      * Returns the scaled frame width (useful for centering the sprite).

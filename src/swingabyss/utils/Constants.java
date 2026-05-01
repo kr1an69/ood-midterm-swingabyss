@@ -27,13 +27,17 @@ public final class Constants {
     // ──────────────────────────────────────────
 
     // UI – Book Style
-    public static final String UI_BOOK_COVER = "/assets/ui/book/book_cover.png";
+    public static final String UI_BOOK_COVER = "/assets/ui/book/default_frame.png";
     public static final String UI_BOOK_PAGE_LEFT = "/assets/ui/book/book_page_left.png";
     public static final String UI_SLOT = "/assets/ui/book/slot.png";
     public static final String UI_BAR_FRAME = "/assets/ui/book/bar_frame.png";
+    public static final String UI_POINT = "/assets/ui/book/point.png";
     public static final String UI_BAR_FILL = "/assets/ui/book/fill.png";
     public static final String UI_BAR_FILL_RED = "/assets/ui/book/fill_red.png";
-
+    public static final String UI_DESCRIPTION_FRAME = "/assets/ui/book/description_frame.png";
+    public static final String UI_PAUSE = "/assets/ui/book/pause.png";
+    public static final String UI_REWARD_CARD = "/assets/ui/book/reward_card.png";
+    public static final String UI_REWARD_CARD_SHADOW = "/assets/ui/book/reward_card_shadow.png";
     // Backgrounds (Gothic Horror — 3 parallax layers)
     public static final String BG_CLOUDS = "/assets/bg/bg_clouds.png";
     public static final String BG_TOWN = "/assets/bg/bg_town.png";
@@ -48,6 +52,14 @@ public final class Constants {
     // ──────────────────────────────────────────
     // Knight idle spritesheet uses 1 sheet: 672x84 -> 7 frames of 96x84
     public static final int[] KNIGHT_IDLE_FRAMES = { 96, 84, 7 };
+
+    // ──────────────────────────────────────────
+    // REWARD CARD CONFIGS
+    // ──────────────────────────────────────────
+    // Actual card content within the 420x420 transparent image (x, y, width,
+    // height)
+    public static final int[] REWARD_CARD_CROP = { 66, 39, 288, 342 };
+    public static final int[] REWARD_SHADOW_CROP = { 66, 39, 302, 355 };
 
     // ──────────────────────────────────────────
     // DISPLAY SCALE (Nearest-Neighbor scale factor)
@@ -77,7 +89,8 @@ public final class Constants {
      * Insets for the HP bar frame (thin horizontal strip — treat as stretch-all)
      */
     public static final Insets INSETS_BAR = new Insets(1, 2, 1, 2);
-
+    /** Insets for the description frame (tooltip/info box) */
+    public static final Insets INSETS_DESCRIPTION_FRAME = new Insets(8, 8, 8, 8);
     // ──────────────────────────────────────────
     // COLORS (fallback palette matching the parchment theme)
     // ──────────────────────────────────────────

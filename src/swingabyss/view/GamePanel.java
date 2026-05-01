@@ -12,9 +12,22 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.Rectangle;
+import java.util.ArrayList;
 import java.awt.image.BufferedImage;
+import java.util.List;
 
 import javax.swing.JPanel;
+
+import swingabyss.model.Entity;
+import swingabyss.model.Hero;
+import swingabyss.model.Monster;
+import swingabyss.model.Observer;
+import swingabyss.manager.TurnManager;
+import swingabyss.manager.GameState;
+import swingabyss.controller.AttackCommand;
 
 /**
  * GamePanel — the main arena where the combat is drawn.
@@ -35,7 +48,7 @@ import javax.swing.JPanel;
  *   25–50%  → yellow (warning)
  *   < 25%   → red (critical, pulses via alpha)
  */
-public class GamePanel extends JPanel {
+public class GamePanel extends JPanel implements Observer {
 
     private static final long serialVersionUID = 1L;
 
@@ -59,14 +72,72 @@ public class GamePanel extends JPanel {
 
     // ── Animation tick counter (for pulsing HP bar) ─────────
     private int tick = 0;
+    
+    private TurnManager turnManager;
+    private BufferedImage slotImg;
+    private BufferedImage pointImg;
+    private BufferedImage descFrameImg;
+    private static class HitboxRecord {
+        Entity entity;
+        Rectangle bounds;
+        HitboxRecord(Entity e, Rectangle b) { this.entity = e; this.bounds = b; }
+    }
+    private List<HitboxRecord> entityHitboxes = new ArrayList<>();
+    
+    private Rectangle getHitbox(Entity target) {
+        for (HitboxRecord r : entityHitboxes) {
+            if (r.entity == target) return r.bounds;
+        }
+        return null;
+    }
+    private Entity hoveredEntity = null;
 
-    public GamePanel() {
+    public GamePanel(TurnManager turnManager) {
+        this.turnManager = turnManager;
         setPreferredSize(new Dimension(Constants.WINDOW_WIDTH, Constants.GAME_HEIGHT));
         setBackground(Color.BLACK);
 
         loadAssets();
         createAnimators();
         startAllAnimators();
+        
+        // Register this GamePanel to observe all entities
+        for (Hero h : turnManager.getHeroes()) h.addObserver(this);
+        for (Monster m : turnManager.getMonsters()) m.addObserver(this);
+        
+        // Listener chuột
+        MouseAdapter mouseAdapter = new MouseAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                hoveredEntity = null;
+                // Duyệt ngược từ cuối lên đầu để lấy con nằm trên cùng
+                for (int i = entityHitboxes.size() - 1; i >= 0; i--) {
+                    HitboxRecord record = entityHitboxes.get(i);
+                    if (record.bounds.contains(e.getPoint())) {
+                        hoveredEntity = record.entity;
+                        break;
+                    }
+                }
+                repaint();
+            }
+
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (turnManager.getCurrentState() == GameState.SELECT_TARGET) {
+                    if (hoveredEntity != null && hoveredEntity instanceof Monster && !hoveredEntity.isDead()) {
+                        AttackCommand cmd = new AttackCommand(turnManager.getCurrentActor(), hoveredEntity);
+                        turnManager.pushCommand(cmd);
+                    }
+                }
+            }
+        };
+        addMouseListener(mouseAdapter);
+        addMouseMotionListener(mouseAdapter);
+    }
+
+    @Override
+    public void onNotify(Entity entity) {
+        repaint();
     }
 
     // ─────────────────────────────────────────────────────────
@@ -87,6 +158,9 @@ public class GamePanel extends JPanel {
         // HP Bar: only the frame overlay is needed as an image.
         // The fill is drawn as a colored rectangle (the fill .png assets are 1x1px utility files).
         barFrame = sl.loadImage(Constants.UI_BAR_FRAME);
+        slotImg = sl.loadImage(Constants.UI_SLOT);
+        pointImg = sl.loadImage(Constants.UI_POINT);
+        descFrameImg = sl.loadImage(Constants.UI_DESCRIPTION_FRAME);
     }
 
     private void createAnimators() {
@@ -104,7 +178,8 @@ public class GamePanel extends JPanel {
                 Constants.PATH_MONSTER_DEMON_IDLE, 
                 Constants.SPRITE_SCALE,
                 this::repaint);
-        monsterDemon.setFlipped(true);
+        // Sprite gốc đã quay trái nên không cần flip
+        monsterDemon.setFlipped(false);
     }
 
     private void startAllAnimators() {
@@ -119,6 +194,7 @@ public class GamePanel extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        entityHitboxes.clear(); // Làm mới danh sách Hitbox mỗi frame
         Graphics2D g2d = (Graphics2D) g;
         tick++;
 
@@ -139,17 +215,35 @@ public class GamePanel extends JPanel {
         // ── 3. Hero sprites (left side) ────────────────────
         // Ground baseline: H - 70 (a bit above the bottom edge)
         int groundY = H - 70;
-        drawEntity(g2d, heroKnight,
-                100,  groundY - heroKnight.getFrameHeight(),
-                hpKnight, "Knight");
+        List<Hero> heroes = turnManager.getHeroes();
+        for (int i = 0; i < heroes.size(); i++) {
+            Hero h = heroes.get(i);
+            if (!h.isDead()) {
+                // Thêm offset Y để Knight chạm đất (do frame gốc bị hở gót)
+                int knightOffsetY = 24; 
+                int xPos = 80 + i * 110;
+                drawEntity(g2d, heroKnight, xPos, groundY - heroKnight.getFrameHeight() + knightOffsetY, h);
+            }
+        }
 
         // ── 4. Monster sprites (right side) ─────────────────
-        drawEntity(g2d, monsterDemon,
-                550, groundY - monsterDemon.getFrameHeight(),
-                hpDemon, "Demon");
+        List<Monster> monsters = turnManager.getMonsters();
+        for (int i = 0; i < monsters.size(); i++) {
+            Monster m = monsters.get(i);
+            if (!m.isDead()) {
+                int xPos = W - 200 - i * 110;
+                drawEntity(g2d, monsterDemon, xPos, groundY - monsterDemon.getFrameHeight(), m);
+            }
+        }
 
         // ── 5. HUD overlay ──────────────────────────────────
         drawHUD(g2d, W);
+        
+        // ── 6. Turn Order UI ────────────────────────────────
+        drawTurnOrder(g2d, W, H);
+        
+        // ── 7. Pointers & Tooltips ──────────────────────────
+        drawPointersAndTooltips(g2d, W, H);
     }
 
     // ─────────────────────────────────────────────────────────
@@ -234,10 +328,19 @@ public class GamePanel extends JPanel {
      * @param name      display name drawn above HP bar
      */
     private void drawEntity(Graphics2D g2d, SpriteAnimator animator,
-                             int x, int y, int[] hp, String name) {
+                             int x, int y, Entity e) {
         BufferedImage frame = animator.getCurrentFrame();
         int fw = animator.getFrameWidth();
         int fh = animator.getFrameHeight();
+
+        // Lưu Hitbox cho Mouse Listener (bóp nhỏ lại để tránh đè viền trong suốt)
+        int padX = 35;
+        int padY = 20;
+        int hitX = x + padX;
+        int hitY = y + padY;
+        int hitW = Math.max(10, fw - 2 * padX);
+        int hitH = Math.max(10, fh - 2 * padY);
+        entityHitboxes.add(new HitboxRecord(e, new Rectangle(hitX, hitY, hitW, hitH)));
 
         // Draw sprite — mirror horizontally for flipped entities (monsters)
         if (animator.isFlipped()) {
@@ -250,14 +353,14 @@ public class GamePanel extends JPanel {
         g2d.setFont(new Font("Monospaced", Font.BOLD, 10));
         g2d.setColor(new Color(0xF5E6C8));
         FontMetrics fm = g2d.getFontMetrics();
-        int nameX = x + (fw - fm.stringWidth(name)) / 2;
-        g2d.drawString(name, nameX, y - 22);
+        int nameX = x + (fw - fm.stringWidth(e.getName())) / 2;
+        g2d.drawString(e.getName(), nameX, y - 22);
 
         // Draw HP bar above sprite
-        int barW = Math.max(fw, 60);
+        int barW = 60; // Cố định chiều rộng thanh máu
         int barX = x + (fw - barW) / 2;
         int barY = y - 14;
-        drawHpBar(g2d, barX, barY, barW, hp[0], hp[1]);
+        drawHpBar(g2d, barX, barY, barW, e.getCurrentHp(), e.getStats().getMaxHp());
     }
 
     // ─────────────────────────────────────────────────────────
@@ -299,9 +402,10 @@ public class GamePanel extends JPanel {
         } else if (ratio > 0.25f) {
             fillColor = Constants.COLOR_HP_YELLOW;
         } else {
-            // Critical HP: pulse the alpha using sine wave for visual urgency
+            // Critical HP: pulse the alpha using time for visual urgency (prevents stutter on mouse move)
             fillColor = Constants.COLOR_HP_RED;
-            float pulse = 0.6f + 0.4f * (float) Math.sin(tick * 0.15);
+            long time = System.currentTimeMillis();
+            float pulse = 0.6f + 0.4f * (float) Math.sin(time / 150.0);
             Composite original = g2d.getComposite();
             g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, pulse));
             int fillW = Math.max(2, (int)(w * ratio));
@@ -348,19 +452,129 @@ public class GamePanel extends JPanel {
         // Wave + turn info
         g2d.setFont(new Font("Monospaced", Font.BOLD, 13));
         g2d.setColor(new Color(0xF5E6C8));
-        g2d.drawString("⚡  WAVE 1", 14, 18);
+        g2d.drawString("⚡  WAVE " + turnManager.getCurrentWave(), 14, 18);
 
-        String state = "▶  HERO TURN — Wizard's Action";
+        String stateStr;
+        if (turnManager.getCurrentState() == GameState.HERO_ACTION) {
+            stateStr = "▶  HERO TURN";
+        } else if (turnManager.getCurrentState() == GameState.MONSTER_ACTION) {
+            stateStr = "▶  MONSTER TURN";
+        } else if (turnManager.getCurrentState() == GameState.REWARD_PHASE) {
+            stateStr = "★  CHOOSE REWARD";
+        } else if (turnManager.getCurrentState() == GameState.GAME_OVER) {
+            stateStr = "☠  GAME OVER";
+        } else {
+            stateStr = "▶  " + turnManager.getCurrentState().toString();
+        }
+        
         g2d.setColor(new Color(0xFFD700));
-        g2d.drawString(state, W / 2 - 110, 18);
+        g2d.drawString(stateStr, W / 2 - 110, 18);
 
-        // VS divider line in the middle of the arena
-        g2d.setColor(new Color(255, 255, 255, 40));
-        g2d.fillRect(W / 2 - 1, 26, 2, getHeight() - 26);
+        // Removed VS divider line and text per user request
+    }
 
-        // "VS" text at center
-        g2d.setFont(new Font("Monospaced", Font.BOLD, 18));
-        g2d.setColor(new Color(255, 255, 255, 80));
-        g2d.drawString("VS", W / 2 - 12, getHeight() / 2 + 9);
+    // ─────────────────────────────────────────────────────────
+    // TURN ORDER UI (Honkai Star Rail style)
+    // ─────────────────────────────────────────────────────────
+    private void drawTurnOrder(Graphics2D g2d, int W, int H) {
+        List<Entity> upcoming = turnManager.getUpcomingTurns(5);
+        if (upcoming.isEmpty()) return;
+
+        int slotSize = 40;
+        int startX = 40; // Shifted right
+        int startY = 60; // Just below the top HUD bar
+        
+        // Vẽ khung nền mờ bọc danh sách lượt đánh
+        int panelWidth = slotSize + 20; // 60
+        int panelHeight = upcoming.size() * (slotSize + 10) + 10;
+        g2d.setColor(new Color(0, 0, 0, 120));
+        g2d.fillRoundRect(startX - 10, startY - 10, panelWidth, panelHeight, 10, 10);
+        
+        for (int i = 0; i < upcoming.size(); i++) {
+            Entity e = upcoming.get(i);
+            int y = startY + i * (slotSize + 10);
+            
+            // Draw slot background
+            if (slotImg != null) {
+                g2d.drawImage(slotImg, startX, y, slotSize, slotSize, null);
+            } else {
+                g2d.setColor(new Color(60, 30, 10, 200));
+                g2d.fillRect(startX, y, slotSize, slotSize);
+            }
+            
+            // Draw faction tint (Blue for Hero, Red for Monster)
+            if (e instanceof Hero) {
+                g2d.setColor(new Color(0, 100, 255, 60)); 
+            } else {
+                g2d.setColor(new Color(255, 0, 0, 60));   
+            }
+            g2d.fillRect(startX + 2, y + 2, slotSize - 4, slotSize - 4);
+            
+            // Draw full avatar (static frame 0)
+            BufferedImage avatar = (e instanceof Hero) ? heroKnight.getFrame(0) : monsterDemon.getFrame(0);
+            if (avatar != null) {
+                int pad = 4;
+                g2d.drawImage(avatar, 
+                    startX + pad, y + pad, slotSize - pad*2, slotSize - pad*2, null);
+            }
+            
+            // Highlight current turn
+            if (i == 0) {
+                g2d.setColor(Constants.COLOR_HP_YELLOW);
+                g2d.drawRect(startX, y, slotSize, slotSize);
+                g2d.drawRect(startX - 1, y - 1, slotSize + 2, slotSize + 2); // Thicker border
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // TOOLTIPS & POINTERS
+    // ─────────────────────────────────────────────────────────
+    private void drawPointersAndTooltips(Graphics2D g2d, int W, int H) {
+        // Vẽ mũi tên lơ lửng trên đầu Hero đang tới lượt
+        Entity currentActor = turnManager.getCurrentActor();
+        if (currentActor != null && currentActor instanceof Hero && !currentActor.isDead()) {
+            Rectangle bounds = getHitbox(currentActor);
+            if (bounds != null && pointImg != null) {
+                int px = bounds.x + (bounds.width - pointImg.getWidth()) / 2;
+                int py = bounds.y - 45; // Static position, removed bounceOffset
+                g2d.drawImage(pointImg, px, py, null);
+            }
+        }
+
+        // Nếu có chuột đang trỏ vào Monster
+        if (hoveredEntity != null && hoveredEntity instanceof Monster && !hoveredEntity.isDead()) {
+            Rectangle bounds = getHitbox(hoveredEntity);
+            if (bounds != null) {
+                if (turnManager.getCurrentState() == GameState.SELECT_TARGET) {
+                    // Trạng thái ngắm bắn -> Vẽ Point lơ lửng (tĩnh, không nảy)
+                    if (pointImg != null) {
+                        int px = bounds.x + (bounds.width - pointImg.getWidth()) / 2;
+                        int py = bounds.y - 45;
+                        g2d.drawImage(pointImg, px, py, null);
+                    }
+                } else {
+                    // Trạng thái khác -> Hiển thị Tooltip Info góc PHẢI trên
+                    if (descFrameImg != null) {
+                        int tooltipW = 200;
+                        int tooltipH = 100;
+                        int tooltipX = W - tooltipW - 20;
+                        int tooltipY = 40; // Bên dưới thanh Wave Info
+                        
+                        g2d.drawImage(descFrameImg, tooltipX, tooltipY, tooltipW, tooltipH, null);
+                        
+                        g2d.setFont(new Font("Monospaced", Font.BOLD, 14));
+                        g2d.setColor(new Color(0xF5E6C8));
+                        g2d.drawString("Enemy: " + hoveredEntity.getName(), tooltipX + 15, tooltipY + 25);
+                        
+                        g2d.setFont(new Font("Monospaced", Font.PLAIN, 12));
+                        g2d.drawString("HP: " + hoveredEntity.getCurrentHp() + "/" + hoveredEntity.getStats().getMaxHp(), tooltipX + 15, tooltipY + 45);
+                        g2d.drawString("ATK: " + hoveredEntity.getStats().getAttack(), tooltipX + 15, tooltipY + 60);
+                        g2d.drawString("DEF: " + hoveredEntity.getStats().getDefense(), tooltipX + 15, tooltipY + 75);
+                        g2d.drawString("SPD: " + hoveredEntity.getStats().getSpeed(), tooltipX + 15, tooltipY + 90);
+                    }
+                }
+            }
+        }
     }
 }

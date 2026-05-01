@@ -137,7 +137,7 @@ public class TurnManager {
      * Nhận lệnh Command (Ví dụ: sau khi click Attack ⚔). Đẩy vào hàng đợi và xử lý.
      */
     public void pushCommand(ICommand cmd) {
-        if (currentState == GameState.HERO_ACTION) {
+        if (currentState == GameState.HERO_ACTION || currentState == GameState.SELECT_TARGET) {
             commandQueue.offer(cmd);
             ICommand activeCmd = commandQueue.poll();
             if (activeCmd != null) {
@@ -230,4 +230,13 @@ public class TurnManager {
     // --- Getters ---
     public GameState getCurrentState() { return currentState; }
     public int getCurrentWave() { return currentWave; }
+    public List<Hero> getHeroes() { return heroes; }
+    public List<Monster> getMonsters() { return monsters; }
+    
+    public Entity getCurrentActor() {
+        if (turnOrder == null || turnOrder.isEmpty() || currentActorIndex >= turnOrder.size()) {
+            return null;
+        }
+        return turnOrder.get(currentActorIndex);
+    }
 }

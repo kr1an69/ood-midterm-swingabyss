@@ -1,6 +1,7 @@
 package swingabyss.view;
 
 import swingabyss.utils.Constants;
+import swingabyss.manager.TurnManager;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -29,15 +30,15 @@ public class MainFrame extends JFrame {
     private GamePanel gamePanel;
     private UIPanel   uiPanel;
 
-    public MainFrame() {
+    public MainFrame(TurnManager turnManager) {
         setTitle("⚔  Swing into the Abyss — v0.2 Asset Preview");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
         setLayout(new BorderLayout());
 
         // ── Instantiate panels ───────────────────────────────
-        gamePanel = new GamePanel();
-        uiPanel   = new UIPanel();
+        gamePanel = new GamePanel(turnManager);
+        uiPanel   = new UIPanel(turnManager);
 
         // Fix UIPanel height (GamePanel uses its own preferred size)
         uiPanel.setPreferredSize(new Dimension(Constants.WINDOW_WIDTH, Constants.UI_HEIGHT));

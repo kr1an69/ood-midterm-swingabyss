@@ -3,6 +3,7 @@ package swingabyss.view;
 import swingabyss.utils.Constants;
 import swingabyss.utils.SpriteLoader;
 
+import swingabyss.manager.TurnManager;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Cursor;
@@ -39,76 +40,107 @@ public class UIPanel extends NineSlicePanel {
     private static final long serialVersionUID = 1L;
 
     // Action button labels — matches the Command Pattern names
-    private static final String[] ACTIONS = { "⚔  Attack", "✨  Skill", "🛡  Defend", "🧪  Item" };
+    private static final String[] ACTIONS = { "⚔  Attack", "🛡  Defend", "🧪  Heal" };
 
     // Slot image used for each button (Flyweight — loaded once, shared by all buttons)
     private final BufferedImage slotImage;
+    private TurnManager turnManager;
 
-    public UIPanel() {
+    public UIPanel(TurnManager turnManager) {
         // Use the Book Cover parchment frame for the panel background
         super(Constants.UI_BOOK_COVER, Constants.INSETS_BOOK_COVER);
+        this.turnManager = turnManager;
         setLayout(new BorderLayout(0, 0));
 
         // Pre-load slot image into Flyweight cache
         slotImage = SpriteLoader.getInstance().loadImage(Constants.UI_SLOT);
 
-        // Title label area (top strip inside the panel)
-        JPanel titleRow = buildTitleRow();
-        add(titleRow, BorderLayout.NORTH);
-
-        // Button grid (center of panel)
-        JPanel buttonRow = buildButtonRow();
-        add(buttonRow, BorderLayout.CENTER);
+        add(buildLeftPanel(), BorderLayout.WEST);
+        add(buildRightPanel(), BorderLayout.EAST);
     }
 
     // ─────────────────────────────────────────────────────────
-    // TITLE ROW
+    // LEFT PANEL (Avatar + Stats)
     // ─────────────────────────────────────────────────────────
-
-    private JPanel buildTitleRow() {
-        JPanel row = new JPanel() {
+    private JPanel buildLeftPanel() {
+        JPanel left = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2d = (Graphics2D) g;
-                g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
-                        RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-                // Wave indicator text — left side
-                g2d.setFont(new Font("Monospaced", Font.BOLD, 11));
+                swingabyss.model.Entity actor = turnManager.getCurrentActor();
+                if (actor == null) return;
+                
+                // Draw Avatar Slot
+                int slotX = 20;
+                int slotY = 15;
+                int slotSize = 55;
+                
+                if (slotImage != null) {
+                    g2d.drawImage(slotImage, slotX, slotY, slotSize, slotSize, null);
+                }
+                
+                // Load static frame 0 of Knight for UI Avatar placeholder
+                BufferedImage avatar = null;
+                if (actor instanceof swingabyss.model.Hero) {
+                    BufferedImage sheet = SpriteLoader.getInstance().loadImage(Constants.PATH_HERO_KNIGHT_IDLE);
+                    if (sheet != null) {
+                        avatar = sheet.getSubimage(0, 0, 96, 84); // Tách frame đầu
+                    }
+                }
+                
+                if (avatar != null) {
+                    int pad = 4;
+                    g2d.drawImage(avatar, slotX + pad, slotY + pad, slotSize - pad*2, slotSize - pad*2, null);
+                }
+
+                // Draw Name and Stats
+                g2d.setFont(new Font("Monospaced", Font.BOLD, 18));
                 g2d.setColor(Constants.COLOR_DARK_BROWN);
-                g2d.drawString("⚡ Wave 1 — Hero's Turn", 8, 14);
-
-                // Right side: small status
-                String status = "HP: 80/100  MP: 40/50";
-                FontMetrics fm = g2d.getFontMetrics();
-                int textW = fm.stringWidth(status);
-                g2d.drawString(status, getWidth() - textW - 10, 14);
+                g2d.drawString(actor.getName(), slotX + slotSize + 15, slotY + 20);
+                
+                g2d.setFont(new Font("Monospaced", Font.BOLD, 15));
+                g2d.setColor(Color.BLACK); // Thống nhất để màu đen cho đơn giản
+                g2d.drawString("HP: " + actor.getCurrentHp() + "/" + actor.getStats().getMaxHp(), slotX + slotSize + 15, slotY + 40);
             }
         };
-        row.setOpaque(false);
-        row.setPreferredSize(new Dimension(0, 20));
-        return row;
+        left.setOpaque(false);
+        left.setPreferredSize(new Dimension(300, 0));
+        return left;
     }
 
     // ─────────────────────────────────────────────────────────
-    // BUTTON ROW
+    // RIGHT PANEL (Action Buttons)
     // ─────────────────────────────────────────────────────────
-
-    private JPanel buildButtonRow() {
-        JPanel row = new JPanel(new GridLayout(1, ACTIONS.length, 12, 0));
-        row.setOpaque(false);
-        row.setBorder(BorderFactory.createEmptyBorder(4, 14, 8, 14));
+    private JPanel buildRightPanel() {
+        JPanel right = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 15, 18));
+        right.setOpaque(false);
+        right.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 15));
 
         for (int i = 0; i < ACTIONS.length; i++) {
             final int idx = i;
-            row.add(new ActionButton(ACTIONS[i], slotImage, () -> {
-                // TODO: Dispatch Command object to CommandQueue
-                // Example: commandQueue.enqueue(new AttackCommand(activeHero, selectedTarget));
-                System.out.println("[UIPanel] Action triggered: " + ACTIONS[idx]);
+            right.add(new ActionButton(ACTIONS[i], slotImage, () -> {
+                swingabyss.model.Entity actor = turnManager.getCurrentActor();
+                if (actor == null || turnManager.getCurrentState() != swingabyss.manager.GameState.HERO_ACTION) {
+                    return; // Chỉ cho phép bấm khi đến lượt Hero
+                }
+
+                if (idx == 0) {
+                    // Attack -> Đổi sang trạng thái ngắm bắn mục tiêu
+                    turnManager.changeState(swingabyss.manager.GameState.SELECT_TARGET);
+                    System.out.println("[UIPanel] Entered SELECT_TARGET mode.");
+                } else if (idx == 1) {
+                    // Defend -> Thực thi luôn
+                    turnManager.pushCommand(new swingabyss.controller.DefendCommand(actor));
+                } else if (idx == 2) {
+                    // Heal -> Thực thi luôn
+                    turnManager.pushCommand(new swingabyss.controller.HealCommand(actor));
+                }
             }));
         }
-        return row;
+        return right;
     }
 
     // ─────────────────────────────────────────────────────────
@@ -141,7 +173,7 @@ public class UIPanel extends NineSlicePanel {
             this.action = action;
             setOpaque(false);
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            setPreferredSize(new Dimension(120, 60));
+            setPreferredSize(new Dimension(110, 45)); // Smaller button size
 
             // Mouse interaction — will become Command dispatchers later
             addMouseListener(new java.awt.event.MouseAdapter() {
