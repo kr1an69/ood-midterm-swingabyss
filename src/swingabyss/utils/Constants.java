@@ -27,7 +27,7 @@ public final class Constants {
     // ──────────────────────────────────────────
 
     // UI – Book Style
-    public static final String UI_BOOK_COVER = "/assets/ui/book/default_frame.png";
+    public static final String UI_DEFAULT_FRAME = "/assets/ui/book/default_frame.png";
     public static final String UI_BOOK_PAGE_LEFT = "/assets/ui/book/book_page_left.png";
     public static final String UI_SLOT = "/assets/ui/book/slot.png";
     public static final String UI_BAR_FRAME = "/assets/ui/book/bar_frame.png";
@@ -45,13 +45,16 @@ public final class Constants {
 
     // Character & Monster Paths (Giai đoạn 3)
     public static final String PATH_HERO_KNIGHT_IDLE = "/assets/heroes/knight/spritesheets/idle_spritesheet.png";
-    public static final String PATH_MONSTER_DEMON_IDLE = "/assets/monsters/demon/sprites/idle";
+    public static final String PATH_MONSTER_DEMON_IDLE = "/assets/monsters/demon/spritesheets/idle_spritesheet.png";
 
     // ──────────────────────────────────────────
     // SPRITE FRAME CONFIGS
     // ──────────────────────────────────────────
     // Knight idle spritesheet uses 1 sheet: 672x84 -> 7 frames of 96x84
     public static final int[] KNIGHT_IDLE_FRAMES = { 96, 84, 7 };
+    
+    // Demon idle spritesheet uses 1 sheet: 960x144 -> 6 frames of 160x144
+    public static final int[] DEMON_IDLE_FRAMES = { 160, 144, 6 };
 
     // ──────────────────────────────────────────
     // REWARD CARD CONFIGS

@@ -80,13 +80,22 @@ public class GamePanel extends JPanel implements Observer {
     private static class HitboxRecord {
         Entity entity;
         Rectangle bounds;
-        HitboxRecord(Entity e, Rectangle b) { this.entity = e; this.bounds = b; }
+        int spriteX;
+        int spriteY;
+        int spriteW;
+        HitboxRecord(Entity e, Rectangle b, int sx, int sy, int sw) {
+            this.entity = e;
+            this.bounds = b;
+            this.spriteX = sx;
+            this.spriteY = sy;
+            this.spriteW = sw;
+        }
     }
     private List<HitboxRecord> entityHitboxes = new ArrayList<>();
     
-    private Rectangle getHitbox(Entity target) {
+    private HitboxRecord getHitboxRecord(Entity target) {
         for (HitboxRecord r : entityHitboxes) {
-            if (r.entity == target) return r.bounds;
+            if (r.entity == target) return r;
         }
         return null;
     }
@@ -173,10 +182,11 @@ public class GamePanel extends JPanel implements Observer {
                 this::repaint);
 
         // Monsters — face left (flip horizontally when drawing)
-        // Uses the new folder loading approach
+        // Uses spritesheet loading approach
         monsterDemon = new SpriteAnimator(
-                Constants.PATH_MONSTER_DEMON_IDLE, 
-                Constants.SPRITE_SCALE,
+                Constants.PATH_MONSTER_DEMON_IDLE,
+                Constants.DEMON_IDLE_FRAMES[0], Constants.DEMON_IDLE_FRAMES[1],
+                Constants.DEMON_IDLE_FRAMES[2], Constants.SPRITE_SCALE,
                 this::repaint);
         // Sprite gốc đã quay trái nên không cần flip
         monsterDemon.setFlipped(false);
@@ -221,7 +231,7 @@ public class GamePanel extends JPanel implements Observer {
             if (!h.isDead()) {
                 // Thêm offset Y để Knight chạm đất (do frame gốc bị hở gót)
                 int knightOffsetY = 24; 
-                int xPos = 80 + i * 110;
+                int xPos = 80 + i * 140;
                 drawEntity(g2d, heroKnight, xPos, groundY - heroKnight.getFrameHeight() + knightOffsetY, h);
             }
         }
@@ -231,7 +241,7 @@ public class GamePanel extends JPanel implements Observer {
         for (int i = 0; i < monsters.size(); i++) {
             Monster m = monsters.get(i);
             if (!m.isDead()) {
-                int xPos = W - 200 - i * 110;
+                int xPos = W - 200 - i * 140;
                 drawEntity(g2d, monsterDemon, xPos, groundY - monsterDemon.getFrameHeight(), m);
             }
         }
@@ -340,7 +350,7 @@ public class GamePanel extends JPanel implements Observer {
         int hitY = y + padY;
         int hitW = Math.max(10, fw - 2 * padX);
         int hitH = Math.max(10, fh - 2 * padY);
-        entityHitboxes.add(new HitboxRecord(e, new Rectangle(hitX, hitY, hitW, hitH)));
+        entityHitboxes.add(new HitboxRecord(e, new Rectangle(hitX, hitY, hitW, hitH), x, y, fw));
 
         // Draw sprite — mirror horizontally for flipped entities (monsters)
         if (animator.isFlipped()) {
@@ -534,23 +544,23 @@ public class GamePanel extends JPanel implements Observer {
         // Vẽ mũi tên lơ lửng trên đầu Hero đang tới lượt
         Entity currentActor = turnManager.getCurrentActor();
         if (currentActor != null && currentActor instanceof Hero && !currentActor.isDead()) {
-            Rectangle bounds = getHitbox(currentActor);
-            if (bounds != null && pointImg != null) {
-                int px = bounds.x + (bounds.width - pointImg.getWidth()) / 2;
-                int py = bounds.y - 45; // Static position, removed bounceOffset
+            HitboxRecord record = getHitboxRecord(currentActor);
+            if (record != null && pointImg != null) {
+                int px = record.spriteX + (record.spriteW - pointImg.getWidth()) / 2;
+                int py = record.spriteY - pointImg.getHeight() - 35; // Dùng chiều cao ảnh để đẩy lên hẳn tên
                 g2d.drawImage(pointImg, px, py, null);
             }
         }
 
         // Nếu có chuột đang trỏ vào Monster
         if (hoveredEntity != null && hoveredEntity instanceof Monster && !hoveredEntity.isDead()) {
-            Rectangle bounds = getHitbox(hoveredEntity);
-            if (bounds != null) {
+            HitboxRecord record = getHitboxRecord(hoveredEntity);
+            if (record != null) {
                 if (turnManager.getCurrentState() == GameState.SELECT_TARGET) {
                     // Trạng thái ngắm bắn -> Vẽ Point lơ lửng (tĩnh, không nảy)
                     if (pointImg != null) {
-                        int px = bounds.x + (bounds.width - pointImg.getWidth()) / 2;
-                        int py = bounds.y - 45;
+                        int px = record.spriteX + (record.spriteW - pointImg.getWidth()) / 2;
+                        int py = record.spriteY - pointImg.getHeight() - 35;
                         g2d.drawImage(pointImg, px, py, null);
                     }
                 } else {
@@ -564,7 +574,7 @@ public class GamePanel extends JPanel implements Observer {
                         g2d.drawImage(descFrameImg, tooltipX, tooltipY, tooltipW, tooltipH, null);
                         
                         g2d.setFont(new Font("Monospaced", Font.BOLD, 14));
-                        g2d.setColor(new Color(0xF5E6C8));
+                        g2d.setColor(Color.BLACK); // Đổi màu text thành Đen
                         g2d.drawString("Enemy: " + hoveredEntity.getName(), tooltipX + 15, tooltipY + 25);
                         
                         g2d.setFont(new Font("Monospaced", Font.PLAIN, 12));

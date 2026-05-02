@@ -14,11 +14,11 @@ import javax.swing.border.EmptyBorder;
  * MainFrame — the top-level application window.
  *
  * Wires together the two main panels via Composition (not inheritance):
- *   ┌─────────────────────────────┐  ← MainFrame (JFrame)
- *   │  GamePanel (450px tall)     │  ← Arena with sprites & background
- *   │─────────────────────────────│
- *   │  UIPanel  (110px tall)      │  ← Action menu with parchment frame
- *   └─────────────────────────────┘
+ * ┌─────────────────────────────┐ ← MainFrame (JFrame)
+ * │ GamePanel (450px tall) │ ← Arena with sprites & background
+ * │─────────────────────────────│
+ * │ UIPanel (110px tall) │ ← Action menu with parchment frame
+ * └─────────────────────────────┘
  *
  * Window is fixed-size (no resize) to maintain pixel-perfect scaling.
  * Centering uses setLocationRelativeTo(null) after pack().
@@ -28,17 +28,17 @@ public class MainFrame extends JFrame {
     private static final long serialVersionUID = 1L;
 
     private GamePanel gamePanel;
-    private UIPanel   uiPanel;
+    private UIPanel uiPanel;
 
     public MainFrame(TurnManager turnManager) {
-        setTitle("⚔  Swing into the Abyss — v0.2 Asset Preview");
+        setTitle("Swing into the Abyss");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
         setLayout(new BorderLayout());
 
         // ── Instantiate panels ───────────────────────────────
         gamePanel = new GamePanel(turnManager);
-        uiPanel   = new UIPanel(turnManager);
+        uiPanel = new UIPanel(turnManager);
 
         // Fix UIPanel height (GamePanel uses its own preferred size)
         uiPanel.setPreferredSize(new Dimension(Constants.WINDOW_WIDTH, Constants.UI_HEIGHT));

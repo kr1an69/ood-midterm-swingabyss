@@ -24,16 +24,18 @@ import javax.swing.JPanel;
  * UIPanel — the action bar at the bottom of the game window.
  *
  * Visual design:
- *   - Background: the Book Cover parchment frame rendered via NineSlicePanel.
- *   - Action buttons: each is a custom-painted slot using UI_TravelBook_Slot01a.png
- *     scaled via the 9-slice algorithm for crisp pixel art.
- *   - Text: uses a Monospaced font to maintain pixel-game aesthetic.
+ * - Background: the Book Cover parchment frame rendered via NineSlicePanel.
+ * - Action buttons: each is a custom-painted slot using
+ * UI_TravelBook_Slot01a.png
+ * scaled via the 9-slice algorithm for crisp pixel art.
+ * - Text: uses a Monospaced font to maintain pixel-game aesthetic.
  *
  * Architecture:
- *   - Extends NineSlicePanel so the parchment frame is automatically the background.
- *   - Buttons are inner ActionButton panels painted with the slot asset.
- *   - Button click events will eventually dispatch Command objects to the
- *     CommandQueue (Command Pattern integration point — stubbed here).
+ * - Extends NineSlicePanel so the parchment frame is automatically the
+ * background.
+ * - Buttons are inner ActionButton panels painted with the slot asset.
+ * - Button click events will eventually dispatch Command objects to the
+ * CommandQueue (Command Pattern integration point — stubbed here).
  */
 public class UIPanel extends NineSlicePanel {
 
@@ -42,13 +44,14 @@ public class UIPanel extends NineSlicePanel {
     // Action button labels — matches the Command Pattern names
     private static final String[] ACTIONS = { "⚔  Attack", "🛡  Defend", "🧪  Heal" };
 
-    // Slot image used for each button (Flyweight — loaded once, shared by all buttons)
+    // Slot image used for each button (Flyweight — loaded once, shared by all
+    // buttons)
     private final BufferedImage slotImage;
     private TurnManager turnManager;
 
     public UIPanel(TurnManager turnManager) {
         // Use the Book Cover parchment frame for the panel background
-        super(Constants.UI_BOOK_COVER, Constants.INSETS_BOOK_COVER);
+        super(Constants.UI_DEFAULT_FRAME, Constants.INSETS_BOOK_COVER);
         this.turnManager = turnManager;
         setLayout(new BorderLayout(0, 0));
 
@@ -71,17 +74,18 @@ public class UIPanel extends NineSlicePanel {
                 g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
                 swingabyss.model.Entity actor = turnManager.getCurrentActor();
-                if (actor == null) return;
-                
+                if (actor == null)
+                    return;
+
                 // Draw Avatar Slot
                 int slotX = 20;
                 int slotY = 15;
                 int slotSize = 55;
-                
+
                 if (slotImage != null) {
                     g2d.drawImage(slotImage, slotX, slotY, slotSize, slotSize, null);
                 }
-                
+
                 // Load static frame 0 of Knight for UI Avatar placeholder
                 BufferedImage avatar = null;
                 if (actor instanceof swingabyss.model.Hero) {
@@ -90,20 +94,21 @@ public class UIPanel extends NineSlicePanel {
                         avatar = sheet.getSubimage(0, 0, 96, 84); // Tách frame đầu
                     }
                 }
-                
+
                 if (avatar != null) {
                     int pad = 4;
-                    g2d.drawImage(avatar, slotX + pad, slotY + pad, slotSize - pad*2, slotSize - pad*2, null);
+                    g2d.drawImage(avatar, slotX + pad, slotY + pad, slotSize - pad * 2, slotSize - pad * 2, null);
                 }
 
                 // Draw Name and Stats
                 g2d.setFont(new Font("Monospaced", Font.BOLD, 18));
                 g2d.setColor(Constants.COLOR_DARK_BROWN);
                 g2d.drawString(actor.getName(), slotX + slotSize + 15, slotY + 20);
-                
+
                 g2d.setFont(new Font("Monospaced", Font.BOLD, 15));
                 g2d.setColor(Color.BLACK); // Thống nhất để màu đen cho đơn giản
-                g2d.drawString("HP: " + actor.getCurrentHp() + "/" + actor.getStats().getMaxHp(), slotX + slotSize + 15, slotY + 40);
+                g2d.drawString("HP: " + actor.getCurrentHp() + "/" + actor.getStats().getMaxHp(), slotX + slotSize + 15,
+                        slotY + 40);
             }
         };
         left.setOpaque(false);
@@ -168,7 +173,7 @@ public class UIPanel extends NineSlicePanel {
         private boolean pressed = false;
 
         ActionButton(String label, BufferedImage slotImg, Runnable action) {
-            this.label  = label;
+            this.label = label;
             this.slotImg = slotImg;
             this.action = action;
             setOpaque(false);
@@ -179,19 +184,29 @@ public class UIPanel extends NineSlicePanel {
             addMouseListener(new java.awt.event.MouseAdapter() {
                 @Override
                 public void mouseEntered(java.awt.event.MouseEvent e) {
-                    hovered = true; repaint();
+                    hovered = true;
+                    repaint();
                 }
+
                 @Override
                 public void mouseExited(java.awt.event.MouseEvent e) {
-                    hovered = false; pressed = false; repaint();
+                    hovered = false;
+                    pressed = false;
+                    repaint();
                 }
+
                 @Override
                 public void mousePressed(java.awt.event.MouseEvent e) {
-                    pressed = true; repaint();
+                    pressed = true;
+                    repaint();
                 }
+
                 @Override
                 public void mouseReleased(java.awt.event.MouseEvent e) {
-                    if (hovered) { pressed = false; action.run(); }
+                    if (hovered) {
+                        pressed = false;
+                        action.run();
+                    }
                     repaint();
                 }
             });
@@ -247,29 +262,33 @@ public class UIPanel extends NineSlicePanel {
                     RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
 
             int sw = slotImg.getWidth(), sh = slotImg.getHeight();
-            int sL = SLOT_INSETS.left,   sT = SLOT_INSETS.top;
+            int sL = SLOT_INSETS.left, sT = SLOT_INSETS.top;
             int sR = sw - SLOT_INSETS.right, sB = sh - SLOT_INSETS.bottom;
             int dL = sL, dT = sT, dR = dw - SLOT_INSETS.right, dB = dh - SLOT_INSETS.bottom;
 
-            if (dR <= dL || dB <= dT) { g2d.drawImage(slotImg, dx, dy, dw, dh, null); return; }
+            if (dR <= dL || dB <= dT) {
+                g2d.drawImage(slotImg, dx, dy, dw, dh, null);
+                return;
+            }
 
             // 9 regions (same algorithm as NineSlicePanel)
-            drawR(g2d, slotImg, dx,    dy,    dL,    dT,    0,  0,  sL,    sT   );
-            drawR(g2d, slotImg, dx+dL, dy,    dR-dL, dT,    sL, 0,  sR-sL, sT   );
-            drawR(g2d, slotImg, dx+dR, dy,    dw-dR, dT,    sR, 0,  sw-sR, sT   );
-            drawR(g2d, slotImg, dx,    dy+dT, dL,    dB-dT, 0,  sT, sL,    sB-sT);
-            drawR(g2d, slotImg, dx+dL, dy+dT, dR-dL, dB-dT, sL, sT, sR-sL, sB-sT);
-            drawR(g2d, slotImg, dx+dR, dy+dT, dw-dR, dB-dT, sR, sT, sw-sR, sB-sT);
-            drawR(g2d, slotImg, dx,    dy+dB, dL,    dh-dB, 0,  sB, sL,    sh-sB);
-            drawR(g2d, slotImg, dx+dL, dy+dB, dR-dL, dh-dB, sL, sB, sR-sL, sh-sB);
-            drawR(g2d, slotImg, dx+dR, dy+dB, dw-dR, dh-dB, sR, sB, sw-sR, sh-sB);
+            drawR(g2d, slotImg, dx, dy, dL, dT, 0, 0, sL, sT);
+            drawR(g2d, slotImg, dx + dL, dy, dR - dL, dT, sL, 0, sR - sL, sT);
+            drawR(g2d, slotImg, dx + dR, dy, dw - dR, dT, sR, 0, sw - sR, sT);
+            drawR(g2d, slotImg, dx, dy + dT, dL, dB - dT, 0, sT, sL, sB - sT);
+            drawR(g2d, slotImg, dx + dL, dy + dT, dR - dL, dB - dT, sL, sT, sR - sL, sB - sT);
+            drawR(g2d, slotImg, dx + dR, dy + dT, dw - dR, dB - dT, sR, sT, sw - sR, sB - sT);
+            drawR(g2d, slotImg, dx, dy + dB, dL, dh - dB, 0, sB, sL, sh - sB);
+            drawR(g2d, slotImg, dx + dL, dy + dB, dR - dL, dh - dB, sL, sB, sR - sL, sh - sB);
+            drawR(g2d, slotImg, dx + dR, dy + dB, dw - dR, dh - dB, sR, sB, sw - sR, sh - sB);
         }
 
         private void drawR(Graphics2D g, BufferedImage img,
-                           int dx, int dy, int dw, int dh,
-                           int sx, int sy, int sw, int sh) {
-            if (dw <= 0 || dh <= 0 || sw <= 0 || sh <= 0) return;
-            g.drawImage(img, dx, dy, dx+dw, dy+dh, sx, sy, sx+sw, sy+sh, null);
+                int dx, int dy, int dw, int dh,
+                int sx, int sy, int sw, int sh) {
+            if (dw <= 0 || dh <= 0 || sw <= 0 || sh <= 0)
+                return;
+            g.drawImage(img, dx, dy, dx + dw, dy + dh, sx, sy, sx + sw, sy + sh, null);
         }
     }
 }
