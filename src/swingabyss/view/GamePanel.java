@@ -28,6 +28,7 @@ import swingabyss.model.Observer;
 import swingabyss.manager.TurnManager;
 import swingabyss.manager.GameState;
 import swingabyss.controller.AttackCommand;
+import swingabyss.factory.RewardFactory;
 
 /**
  * GamePanel — the main arena where the combat is drawn.
@@ -92,6 +93,7 @@ public class GamePanel extends JPanel implements Observer {
         }
     }
     private List<HitboxRecord> entityHitboxes = new ArrayList<>();
+    private List<Rectangle> rewardHitboxes = new ArrayList<>();
     
     private HitboxRecord getHitboxRecord(Entity target) {
         for (HitboxRecord r : entityHitboxes) {
@@ -100,6 +102,8 @@ public class GamePanel extends JPanel implements Observer {
         return null;
     }
     private Entity hoveredEntity = null;
+    private BufferedImage rewardCardImg;
+    private int hoveredRewardIndex = -1;
 
     public GamePanel(TurnManager turnManager) {
         this.turnManager = turnManager;
@@ -119,12 +123,23 @@ public class GamePanel extends JPanel implements Observer {
             @Override
             public void mouseMoved(MouseEvent e) {
                 hoveredEntity = null;
-                // Duyệt ngược từ cuối lên đầu để lấy con nằm trên cùng
-                for (int i = entityHitboxes.size() - 1; i >= 0; i--) {
-                    HitboxRecord record = entityHitboxes.get(i);
-                    if (record.bounds.contains(e.getPoint())) {
-                        hoveredEntity = record.entity;
-                        break;
+                hoveredRewardIndex = -1;
+                
+                if (turnManager.getCurrentState() == GameState.REWARD_PHASE) {
+                    for (int i = 0; i < rewardHitboxes.size(); i++) {
+                        if (rewardHitboxes.get(i).contains(e.getPoint())) {
+                            hoveredRewardIndex = i;
+                            break;
+                        }
+                    }
+                } else {
+                    // Duyệt ngược từ cuối lên đầu để lấy con nằm trên cùng
+                    for (int i = entityHitboxes.size() - 1; i >= 0; i--) {
+                        HitboxRecord record = entityHitboxes.get(i);
+                        if (record.bounds.contains(e.getPoint())) {
+                            hoveredEntity = record.entity;
+                            break;
+                        }
                     }
                 }
                 repaint();
@@ -136,6 +151,13 @@ public class GamePanel extends JPanel implements Observer {
                     if (hoveredEntity != null && hoveredEntity instanceof Monster && !hoveredEntity.isDead()) {
                         AttackCommand cmd = new AttackCommand(turnManager.getCurrentActor(), hoveredEntity);
                         turnManager.pushCommand(cmd);
+                    }
+                } else if (turnManager.getCurrentState() == GameState.REWARD_PHASE) {
+                    if (hoveredRewardIndex != -1 && hoveredRewardIndex < turnManager.getCurrentRewards().size()) {
+                        RewardFactory.Reward r = turnManager.getCurrentRewards().get(hoveredRewardIndex);
+                        r.applyEffect(turnManager.getHeroes());
+                        hoveredRewardIndex = -1;
+                        turnManager.nextWave();
                     }
                 }
             }
@@ -170,6 +192,12 @@ public class GamePanel extends JPanel implements Observer {
         slotImg = sl.loadImage(Constants.UI_SLOT);
         pointImg = sl.loadImage(Constants.UI_POINT);
         descFrameImg = sl.loadImage(Constants.UI_DESCRIPTION_FRAME);
+        
+        BufferedImage rawReward = sl.loadImage(Constants.UI_REWARD_CARD);
+        if (rawReward != null) {
+            int[] crop = Constants.REWARD_CARD_CROP;
+            rewardCardImg = rawReward.getSubimage(crop[0], crop[1], crop[2], crop[3]);
+        }
     }
 
     private void createAnimators() {
@@ -205,6 +233,7 @@ public class GamePanel extends JPanel implements Observer {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         entityHitboxes.clear(); // Làm mới danh sách Hitbox mỗi frame
+        rewardHitboxes.clear(); // Làm mới danh sách Reward Hitbox
         Graphics2D g2d = (Graphics2D) g;
         tick++;
 
@@ -254,6 +283,11 @@ public class GamePanel extends JPanel implements Observer {
         
         // ── 7. Pointers & Tooltips ──────────────────────────
         drawPointersAndTooltips(g2d, W, H);
+        
+        // ── 8. Reward Phase ─────────────────────────────────
+        if (turnManager.getCurrentState() == GameState.REWARD_PHASE) {
+            drawRewardPhase(g2d, W, H);
+        }
     }
 
     // ─────────────────────────────────────────────────────────
@@ -585,6 +619,90 @@ public class GamePanel extends JPanel implements Observer {
                     }
                 }
             }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // REWARD PHASE RENDERING
+    // ─────────────────────────────────────────────────────────
+    private void drawRewardPhase(Graphics2D g2d, int W, int H) {
+        // Darken the background
+        g2d.setColor(new Color(0, 0, 0, 180));
+        g2d.fillRect(0, 0, W, H);
+
+        List<RewardFactory.Reward> rewards = turnManager.getCurrentRewards();
+        if (rewards == null || rewards.size() < 3) return;
+
+        int cardW = 200;
+        int cardH = 240;
+        int gap = 60;
+        int startX = (W - (cardW * 3 + gap * 2)) / 2;
+        int startY = (H - cardH) / 2;
+
+        for (int i = 0; i < 3; i++) {
+            RewardFactory.Reward r = rewards.get(i);
+            int cx = startX + i * (cardW + gap);
+            int cy = startY;
+            
+            // Hover effect: translate slightly upwards
+            if (i == hoveredRewardIndex) {
+                cy -= 10;
+            }
+            
+            rewardHitboxes.add(new Rectangle(cx, cy, cardW, cardH));
+            
+            // Draw card background
+            if (rewardCardImg != null) {
+                g2d.drawImage(rewardCardImg, cx, cy, cardW, cardH, null);
+            } else {
+                g2d.setColor(Constants.COLOR_PARCHMENT);
+                g2d.fillRoundRect(cx, cy, cardW, cardH, 15, 15);
+                g2d.setColor(Constants.COLOR_DARK_BROWN);
+                g2d.drawRoundRect(cx, cy, cardW, cardH, 15, 15);
+            }
+
+            // Draw highlight overlay and gold border if hovered
+            if (i == hoveredRewardIndex) {
+                g2d.setColor(new Color(255, 255, 255, 40));
+                g2d.fillRoundRect(cx, cy, cardW, cardH, 10, 10);
+                
+                g2d.setColor(Constants.COLOR_HP_YELLOW);
+                g2d.drawRoundRect(cx - 2, cy - 2, cardW + 4, cardH + 4, 10, 10);
+            }
+
+            // Draw Text
+            g2d.setColor(Color.BLACK); // MÀU ĐEN ĐẬM
+            g2d.setFont(new Font("Monospaced", Font.BOLD, 22));
+            FontMetrics fm = g2d.getFontMetrics();
+            int titleW = fm.stringWidth(r.getTitle());
+            g2d.drawString(r.getTitle(), cx + (cardW - titleW) / 2, cy + 80);
+
+            g2d.setFont(new Font("Monospaced", Font.BOLD, 14));
+            fm = g2d.getFontMetrics();
+            // Xử lý text dài (giả định ngắn, ném vào giữa)
+            int descW = fm.stringWidth(r.getDescription());
+            // Nếu quá dài thì cắt làm 2 dòng (viết logic wrap đơn giản)
+            if (descW > cardW - 20) {
+                String[] words = r.getDescription().split(" ");
+                String line1 = "";
+                String line2 = "";
+                int mid = words.length / 2;
+                for(int w = 0; w < words.length; w++) {
+                    if(w <= mid) line1 += words[w] + " ";
+                    else line2 += words[w] + " ";
+                }
+                g2d.drawString(line1.trim(), cx + (cardW - fm.stringWidth(line1.trim())) / 2, cy + 130);
+                g2d.drawString(line2.trim(), cx + (cardW - fm.stringWidth(line2.trim())) / 2, cy + 150);
+            } else {
+                g2d.drawString(r.getDescription(), cx + (cardW - descW) / 2, cy + 130);
+            }
+            
+            // Draw instruction "Click to select"
+            g2d.setColor(new Color(100, 100, 100)); // Xám đậm
+            g2d.setFont(new Font("Monospaced", Font.PLAIN, 12));
+            String clickText = "Click to Select";
+            int clickW = g2d.getFontMetrics().stringWidth(clickText);
+            g2d.drawString(clickText, cx + (cardW - clickW) / 2, cy + cardH - 30);
         }
     }
 }

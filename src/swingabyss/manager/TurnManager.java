@@ -5,6 +5,8 @@ import swingabyss.model.Hero;
 import swingabyss.model.Monster;
 import swingabyss.controller.AttackCommand;
 import swingabyss.controller.ICommand;
+import swingabyss.factory.MonsterFactory;
+import swingabyss.factory.RewardFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,6 +29,7 @@ public class TurnManager {
     private List<Entity> turnOrder;
     private int currentActorIndex;
     private int currentWave;
+    private List<RewardFactory.Reward> currentRewards;
 
     private Queue<ICommand> commandQueue;
     
@@ -50,6 +53,8 @@ public class TurnManager {
 
             case START_WAVE:
                 System.out.println("\n[FSM] Bắt đầu Wave " + currentWave);
+                this.monsters.clear();
+                this.monsters.addAll(MonsterFactory.generateWave(currentWave));
                 buildTurnOrder();
                 changeState(GameState.CHECK_TURN);
                 processNextTurn(); // Chạy ngay logic kiểm tra lượt
@@ -63,6 +68,7 @@ public class TurnManager {
                     return;
                 }
                 if (getAliveMonsters().isEmpty()) {
+                    this.currentRewards = RewardFactory.generateRewards();
                     changeState(GameState.REWARD_PHASE);
                     System.out.println("[FSM] Quái đã chết hết. Chuyển sang chọn thưởng.");
                     return;
@@ -238,5 +244,9 @@ public class TurnManager {
             return null;
         }
         return turnOrder.get(currentActorIndex);
+    }
+    
+    public List<RewardFactory.Reward> getCurrentRewards() {
+        return currentRewards;
     }
 }

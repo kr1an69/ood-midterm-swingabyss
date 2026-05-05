@@ -15,13 +15,9 @@ public class Main {
             heroes.add(new swingabyss.model.Hero("Saber", new swingabyss.model.Stats(80, 25, 5, 120)));
             heroes.add(new swingabyss.model.Hero("Mage", new swingabyss.model.Stats(60, 30, 2, 90)));
 
-            List<swingabyss.model.Monster> monsters = new ArrayList<>();
-            monsters.add(new swingabyss.model.Monster("Demon A", new swingabyss.model.Stats(120, 15, 5, 95), 1));
-            monsters.add(new swingabyss.model.Monster("Demon B", new swingabyss.model.Stats(120, 15, 5, 90), 1));
-            monsters.add(new swingabyss.model.Monster("Demon C", new swingabyss.model.Stats(120, 15, 5, 85), 1));
-
-            // Khởi tạo FSM Manager
-            swingabyss.manager.TurnManager turnManager = new swingabyss.manager.TurnManager(heroes, monsters);
+            // Khởi tạo FSM Manager (Monsters sẽ được sinh bởi MonsterFactory)
+            List<swingabyss.model.Monster> emptyMonsters = new ArrayList<>();
+            swingabyss.manager.TurnManager turnManager = new swingabyss.manager.TurnManager(heroes, emptyMonsters);
             turnManager.startGame(); // Start the first wave
 
             // Inject dependency vào View
