@@ -12,6 +12,19 @@ import java.awt.Insets;
  * - 9-Slice insets for each UI element
  * - Rendering & animation timing
  */
+/*
+ * heroes:
+ * knight attack 5 frame - idle 7 frame
+ * magician attack 7 frame - idle 8 frame
+ * swordswoman attack 6 frame - idle 4 frame
+ * monsters:
+ * beast attack 6 frame - idle 6 frame
+ * dragon attack 7 frame - idle 6 frame
+ * demon attack 11 frame - idle 6 frame
+ * ghost attack 4 frame - idle 7 frame
+ * goblin attack 8 frame - idle 4 frame
+ * ogre attack 7 frame - idle 4 frame
+ */
 public final class Constants {
 
     // ──────────────────────────────────────────
@@ -43,18 +56,45 @@ public final class Constants {
     public static final String BG_TOWN = "/assets/bg/bg_town.png";
     public static final String BG_TILES = "/assets/bg/bg_tiles.png";
 
-    // Character & Monster Paths (Giai đoạn 3)
-    public static final String PATH_HERO_KNIGHT_IDLE = "/assets/heroes/knight/spritesheets/idle_spritesheet.png";
-    public static final String PATH_MONSTER_DEMON_IDLE = "/assets/monsters/demon/spritesheets/idle_spritesheet.png";
+    // ──────────────────────────────────────────
+    // DYNAMIC SPRITE CONFIGS
+    // ──────────────────────────────────────────
+    public static class SpriteConfig {
+        public String path;
+        public int frameWidth;
+        public int frameHeight;
+        public int frameCount;
+        public SpriteConfig(String path, int frameWidth, int frameHeight, int frameCount) {
+            this.path = path;
+            this.frameWidth = frameWidth;
+            this.frameHeight = frameHeight;
+            this.frameCount = frameCount;
+        }
+    }
 
-    // ──────────────────────────────────────────
-    // SPRITE FRAME CONFIGS
-    // ──────────────────────────────────────────
-    // Knight idle spritesheet uses 1 sheet: 672x84 -> 7 frames of 96x84
-    public static final int[] KNIGHT_IDLE_FRAMES = { 96, 84, 7 };
-    
-    // Demon idle spritesheet uses 1 sheet: 960x144 -> 6 frames of 160x144
-    public static final int[] DEMON_IDLE_FRAMES = { 160, 144, 6 };
+    public static SpriteConfig getIdleSpriteConfig(String entityName, boolean isHero) {
+        String name = entityName.toLowerCase();
+        String path = isHero ? "/assets/heroes/" + name + "/spritesheets/idle_spritesheet.png" 
+                             : "/assets/monsters/" + name + "/spritesheets/idle_spritesheet.png";
+        
+        if (isHero) {
+            switch (name) {
+                case "knight": return new SpriteConfig(path, 96, 84, 7);
+                case "magician": return new SpriteConfig(path, 128, 128, 8);
+                case "swordswoman": return new SpriteConfig(path, 64, 80, 4);
+            }
+        } else {
+            switch (name) {
+                case "beast": return new SpriteConfig(path, 80, 160, 6);
+                case "demon": return new SpriteConfig(path, 160, 144, 6);
+                case "dragon": return new SpriteConfig(path, 144, 64, 6);
+                case "ghost": return new SpriteConfig(path, 64, 80, 7);
+                case "goblin": return new SpriteConfig(path, 150, 150, 4);
+                case "ogre": return new SpriteConfig(path, 144, 80, 4);
+            }
+        }
+        return null;
+    }
 
     // ──────────────────────────────────────────
     // REWARD CARD CONFIGS

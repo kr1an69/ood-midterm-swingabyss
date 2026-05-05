@@ -18,6 +18,8 @@ import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.awt.image.BufferedImage;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 import javax.swing.JPanel;
 
@@ -57,11 +59,8 @@ public class GamePanel extends JPanel implements Observer {
     // bg_tiles is a TILESET (individual tile graphics), NOT a scene background -- excluded intentionally.
     private BufferedImage bgClouds, bgTown;
 
-    // ── Hero animators (left side) ──────────────────────────
-    private SpriteAnimator heroKnight;
-
-    // ── Monster animators (right side) ─────────────────────
-    private SpriteAnimator monsterDemon;
+    // ── Entity animators (Dynamic) ──────────────────────────
+    private Map<Entity, SpriteAnimator> animators = new HashMap<>();
 
     // HP Bar frame image overlay. Fill is drawn as colored Graphics2D rects (no image needed).
     private BufferedImage barFrame;
@@ -111,8 +110,7 @@ public class GamePanel extends JPanel implements Observer {
         setBackground(Color.BLACK);
 
         loadAssets();
-        createAnimators();
-        startAllAnimators();
+        // createAnimators and startAllAnimators are no longer needed, handled dynamically in getAnimator
         
         // Register this GamePanel to observe all entities
         for (Hero h : turnManager.getHeroes()) h.addObserver(this);
@@ -200,29 +198,36 @@ public class GamePanel extends JPanel implements Observer {
         }
     }
 
-    private void createAnimators() {
-        // Heroes — face right (no flip)
-        // Uses the original spritesheet loading method
-        heroKnight = new SpriteAnimator(
-                Constants.PATH_HERO_KNIGHT_IDLE,
-                Constants.KNIGHT_IDLE_FRAMES[0], Constants.KNIGHT_IDLE_FRAMES[1],
-                Constants.KNIGHT_IDLE_FRAMES[2], Constants.SPRITE_SCALE,
-                this::repaint);
-
-        // Monsters — face left (flip horizontally when drawing)
-        // Uses spritesheet loading approach
-        monsterDemon = new SpriteAnimator(
-                Constants.PATH_MONSTER_DEMON_IDLE,
-                Constants.DEMON_IDLE_FRAMES[0], Constants.DEMON_IDLE_FRAMES[1],
-                Constants.DEMON_IDLE_FRAMES[2], Constants.SPRITE_SCALE,
-                this::repaint);
-        // Sprite gốc đã quay trái nên không cần flip
-        monsterDemon.setFlipped(false);
-    }
-
-    private void startAllAnimators() {
-        heroKnight.start();
-        monsterDemon.start();
+    // ─────────────────────────────────────────────────────────
+    // DYNAMIC ANIMATOR LOADING
+    // ─────────────────────────────────────────────────────────
+    private SpriteAnimator getAnimator(Entity e) {
+        if (!animators.containsKey(e)) {
+            boolean isHero = e instanceof Hero;
+            Constants.SpriteConfig config = Constants.getIdleSpriteConfig(e.getName(), isHero);
+            
+            // Fallback
+            if (config == null) {
+                config = Constants.getIdleSpriteConfig(isHero ? "knight" : "demon", isHero);
+            }
+            
+            SpriteAnimator anim = new SpriteAnimator(
+                    config.path,
+                    config.frameWidth, config.frameHeight, config.frameCount,
+                    Constants.SPRITE_SCALE,
+                    this::repaint);
+                    
+            // Flip goblin, and any specific monster if needed
+            if (!isHero) {
+                anim.setFlipped(e.getName().equalsIgnoreCase("goblin"));
+            } else {
+                anim.setFlipped(false);
+            }
+            
+            anim.start();
+            animators.put(e, anim);
+        }
+        return animators.get(e);
     }
 
     // ─────────────────────────────────────────────────────────
@@ -261,7 +266,8 @@ public class GamePanel extends JPanel implements Observer {
                 // Thêm offset Y để Knight chạm đất (do frame gốc bị hở gót)
                 int knightOffsetY = 24; 
                 int xPos = 80 + i * 140;
-                drawEntity(g2d, heroKnight, xPos, groundY - heroKnight.getFrameHeight() + knightOffsetY, h);
+                SpriteAnimator anim = getAnimator(h);
+                drawEntity(g2d, anim, xPos, groundY - anim.getFrameHeight() + knightOffsetY, h);
             }
         }
 
@@ -271,7 +277,8 @@ public class GamePanel extends JPanel implements Observer {
             Monster m = monsters.get(i);
             if (!m.isDead()) {
                 int xPos = W - 200 - i * 140;
-                drawEntity(g2d, monsterDemon, xPos, groundY - monsterDemon.getFrameHeight(), m);
+                SpriteAnimator anim = getAnimator(m);
+                drawEntity(g2d, anim, xPos, groundY - anim.getFrameHeight(), m);
             }
         }
 
@@ -555,7 +562,8 @@ public class GamePanel extends JPanel implements Observer {
             g2d.fillRect(startX + 2, y + 2, slotSize - 4, slotSize - 4);
             
             // Draw full avatar (static frame 0)
-            BufferedImage avatar = (e instanceof Hero) ? heroKnight.getFrame(0) : monsterDemon.getFrame(0);
+            SpriteAnimator anim = getAnimator(e);
+            BufferedImage avatar = anim != null ? anim.getFrame(0) : null;
             if (avatar != null) {
                 int pad = 4;
                 g2d.drawImage(avatar, 

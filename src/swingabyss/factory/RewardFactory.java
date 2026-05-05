@@ -67,6 +67,12 @@ public class RewardFactory {
             }
         }));
 
+        allPossibleRewards.add(new Reward("CHARGE UP", "+3 Heal Charge for all Heroes", heroes -> {
+            for (Hero h : heroes) {
+                h.addMaxHealCharges(3);
+            }
+        }));
+
         // Shuffle and pick 3
         Collections.shuffle(allPossibleRewards);
         return allPossibleRewards.subList(0, 3);

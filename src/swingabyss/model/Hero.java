@@ -11,6 +11,10 @@ public class Hero extends Entity {
     // Danh sách kỹ năng của Hero (Strategy Pattern)
     private List<ISkill> skills;
 
+    // Trạng thái kỹ năng hồi máu (Charge)
+    private int healCharges = 5;
+    private int maxHealCharges = 10;
+
     public Hero(String name, Stats stats) {
         super(name, stats);
         this.skills = new ArrayList<>();
@@ -28,5 +32,24 @@ public class Hero extends Entity {
      */
     public List<ISkill> getSkills() {
         return skills;
+    }
+
+    public int getHealCharges() {
+        return healCharges;
+    }
+
+    public int getMaxHealCharges() {
+        return maxHealCharges;
+    }
+
+    public void useHealCharge() {
+        if (healCharges > 0) {
+            healCharges--;
+        }
+    }
+
+    public void addMaxHealCharges(int amount) {
+        maxHealCharges += amount;
+        healCharges += amount;
     }
 }

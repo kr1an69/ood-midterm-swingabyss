@@ -11,9 +11,9 @@ public class Main {
         SwingUtilities.invokeLater(() -> {
             // Khởi tạo Model (Entities)
             List<swingabyss.model.Hero> heroes = new ArrayList<>();
-            heroes.add(new swingabyss.model.Hero("Knight", new swingabyss.model.Stats(100, 20, 10, 105)));
-            heroes.add(new swingabyss.model.Hero("Saber", new swingabyss.model.Stats(80, 25, 5, 120)));
-            heroes.add(new swingabyss.model.Hero("Mage", new swingabyss.model.Stats(60, 30, 2, 90)));
+            heroes.add(new swingabyss.model.Hero("knight", new swingabyss.model.Stats(100, 20, 10, 105)));
+            heroes.add(new swingabyss.model.Hero("swordswoman", new swingabyss.model.Stats(80, 25, 5, 120)));
+            heroes.add(new swingabyss.model.Hero("magician", new swingabyss.model.Stats(60, 30, 2, 90)));
 
             // Khởi tạo FSM Manager (Monsters sẽ được sinh bởi MonsterFactory)
             List<swingabyss.model.Monster> emptyMonsters = new ArrayList<>();

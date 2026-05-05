@@ -86,12 +86,15 @@ public class UIPanel extends NineSlicePanel {
                     g2d.drawImage(slotImage, slotX, slotY, slotSize, slotSize, null);
                 }
 
-                // Load static frame 0 of Knight for UI Avatar placeholder
+                // Load static frame 0 of Hero for UI Avatar placeholder
                 BufferedImage avatar = null;
                 if (actor instanceof swingabyss.model.Hero) {
-                    BufferedImage sheet = SpriteLoader.getInstance().loadImage(Constants.PATH_HERO_KNIGHT_IDLE);
-                    if (sheet != null) {
-                        avatar = sheet.getSubimage(0, 0, 96, 84); // Tách frame đầu
+                    Constants.SpriteConfig config = Constants.getIdleSpriteConfig(actor.getName(), true);
+                    if (config != null) {
+                        BufferedImage sheet = SpriteLoader.getInstance().loadImage(config.path);
+                        if (sheet != null) {
+                            avatar = sheet.getSubimage(0, 0, config.frameWidth, config.frameHeight);
+                        }
                     }
                 }
 
@@ -141,7 +144,7 @@ public class UIPanel extends NineSlicePanel {
                     turnManager.pushCommand(new swingabyss.controller.DefendCommand(actor));
                 } else if (idx == 2) {
                     // Heal -> Thực thi luôn
-                    turnManager.pushCommand(new swingabyss.controller.HealCommand(actor));
+                    turnManager.pushCommand(new swingabyss.controller.HealCommand((swingabyss.model.Hero)actor));
                 }
             }));
         }
