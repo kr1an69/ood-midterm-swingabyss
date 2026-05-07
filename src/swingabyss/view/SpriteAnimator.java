@@ -28,6 +28,8 @@ public class SpriteAnimator {
     private int currentFrame = 0;
     private final Timer timer;
     private boolean flipped = false;  // Mirror sprite for left-facing direction
+    private boolean looping = true;
+    private Runnable onComplete = null;
 
     /**
      * Creates a SpriteAnimator that loads its frames from a spritesheet.
@@ -47,8 +49,18 @@ public class SpriteAnimator {
 
         // Swing Timer fires on the EDT — safe for UI updates
         this.timer = new Timer(Constants.ANIM_DELAY_MS, e -> {
-            currentFrame = (currentFrame + 1) % frames.length;
-            if (onTick != null) onTick.run();
+            if (!looping && currentFrame == frames.length - 1) {
+                ((Timer)e.getSource()).stop();
+                if (onTick != null) onTick.run();
+                if (onComplete != null) {
+                    Runnable callback = onComplete;
+                    onComplete = null;
+                    callback.run();
+                }
+            } else {
+                currentFrame = (currentFrame + 1) % frames.length;
+                if (onTick != null) onTick.run();
+            }
         });
     }
 
@@ -66,8 +78,18 @@ public class SpriteAnimator {
 
         this.timer = new Timer(Constants.ANIM_DELAY_MS, e -> {
             if (frames.length > 0) {
-                currentFrame = (currentFrame + 1) % frames.length;
-                if (onTick != null) onTick.run();
+                if (!looping && currentFrame == frames.length - 1) {
+                    ((Timer)e.getSource()).stop();
+                    if (onTick != null) onTick.run();
+                    if (onComplete != null) {
+                        Runnable callback = onComplete;
+                        onComplete = null;
+                        callback.run();
+                    }
+                } else {
+                    currentFrame = (currentFrame + 1) % frames.length;
+                    if (onTick != null) onTick.run();
+                }
             }
         });
     }
@@ -91,6 +113,20 @@ public class SpriteAnimator {
     public void stop() {
         timer.stop();
         currentFrame = 0;
+    }
+
+    /** Plays the animation exactly once, then calls the callback. */
+    public void playOnce(Runnable onComplete) {
+        this.looping = false;
+        this.onComplete = onComplete;
+        this.currentFrame = 0;
+        start();
+    }
+
+    /** Restores the animator to normal looping behavior. */
+    public void resetLoop() {
+        this.looping = true;
+        this.onComplete = null;
     }
 
     /**

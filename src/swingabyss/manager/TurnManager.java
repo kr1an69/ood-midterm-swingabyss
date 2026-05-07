@@ -24,7 +24,7 @@ public class TurnManager {
     private GameState currentState;
     private List<Hero> heroes;
     private List<Monster> monsters;
-    
+
     // Thuật toán lượt đánh (Turn Order)
     private List<Entity> turnOrder;
     private int currentActorIndex;
@@ -32,7 +32,9 @@ public class TurnManager {
     private List<RewardFactory.Reward> currentRewards;
 
     private Queue<ICommand> commandQueue;
-    
+    private ICombatListener combatListener;
+    private ITurnListener turnListener;
+
     public TurnManager(List<Hero> heroes, List<Monster> monsters) {
         this.heroes = heroes != null ? heroes : new ArrayList<>();
         this.monsters = monsters != null ? monsters : new ArrayList<>();
@@ -41,9 +43,17 @@ public class TurnManager {
         this.currentWave = 1;
         this.currentState = GameState.MAIN_MENU; // Bắt đầu ở Main Menu
     }
-    
+
+    public void setCombatListener(ICombatListener listener) {
+        this.combatListener = listener;
+    }
+
+    public void setTurnListener(ITurnListener listener) {
+        this.turnListener = listener;
+    }
+
     /**
-     * Chạy cỗ máy trạng thái (FSM). 
+     * Chạy cỗ máy trạng thái (FSM).
      */
     public void processNextTurn() {
         switch (currentState) {
@@ -81,8 +91,9 @@ public class TurnManager {
                 }
 
                 Entity currentActor = turnOrder.get(currentActorIndex);
-                
-                // [GIẢI QUYẾT BÀI TOÁN XÁC CHẾT]: Nếu nhân vật này đã chết trước khi tới lượt -> bỏ qua
+
+                // [GIẢI QUYẾT BÀI TOÁN XÁC CHẾT]: Nếu nhân vật này đã chết trước khi tới lượt
+                // -> bỏ qua
                 if (currentActor.isDead()) {
                     currentActorIndex++;
                     processNextTurn();
@@ -90,7 +101,8 @@ public class TurnManager {
                 }
 
                 // Reset giáp phòng thủ (buff từ DefendCommand lượt trước của người này)
-                currentActor.getStats().setDefense(currentActor.getStats().getDefense() % 10); // Logic tạm, thực tế cần biến gốc
+                currentActor.getStats().setDefense(currentActor.getStats().getDefense() % 10); // Logic tạm, thực tế cần
+                                                                                               // biến gốc
 
                 // Quyết định ai đánh
                 System.out.println("[FSM] Tới lượt của: " + currentActor.getName());
@@ -104,28 +116,47 @@ public class TurnManager {
                 break;
 
             case HERO_ACTION:
-                // Trạng thái này FSM đứng im chờ UI. Khi UI gọi pushCommand, hàm đó sẽ xử lý.
+                // Tạm dừng ở đây, chờ nhận `ICommand` từ giao diện đẩy vào `pushCommand`
+                if (turnListener != null) {
+                    turnListener.onTurnChange(turnOrder.get(currentActorIndex));
+                }
+                break;
+
+            case SELECT_TARGET:
+                // Người chơi đang chọn mục tiêu
                 break;
 
             case MONSTER_ACTION:
                 // AI Quái vật tự động tấn công ngẫu nhiên
                 Entity activeMonster = turnOrder.get(currentActorIndex);
+                if (turnListener != null) {
+                    turnListener.onTurnChange(activeMonster);
+                }
                 List<Hero> aliveHeroes = getAliveHeroes();
                 if (!aliveHeroes.isEmpty()) {
                     Hero target = aliveHeroes.get(new Random().nextInt(aliveHeroes.size()));
                     ICommand attack = new AttackCommand(activeMonster, target);
+                    if (combatListener != null) {
+                        combatListener.onAttack(activeMonster, target);
+                    }
                     attack.execute();
+                    currentActorIndex++;
+                    changeState(GameState.ANIMATING);
+                } else {
+                    currentActorIndex++;
+                    changeState(GameState.CHECK_TURN);
+                    processNextTurn();
                 }
-                // Xong lượt
-                currentActorIndex++;
-                changeState(GameState.CHECK_TURN);
-                processNextTurn();
+                break;
+
+            case ANIMATING:
+                // Đứng im chờ UI chạy xong animation và gọi resumeTurn()
                 break;
 
             case REWARD_PHASE:
                 // Đứng im chờ người chơi chọn thưởng. Sau khi chọn sẽ gọi nextWave()
                 break;
-                
+
             case GAME_OVER:
                 // Kết thúc game
                 break;
@@ -138,7 +169,17 @@ public class TurnManager {
     public void changeState(GameState s) {
         this.currentState = s;
     }
-    
+
+    /**
+     * Được gọi bởi UI sau khi Animation chạy xong để nhường luồng chạy tiếp.
+     */
+    public void resumeTurn() {
+        if (currentState == GameState.ANIMATING) {
+            changeState(GameState.CHECK_TURN);
+            processNextTurn();
+        }
+    }
+
     /**
      * Nhận lệnh Command (Ví dụ: sau khi click Attack ⚔). Đẩy vào hàng đợi và xử lý.
      */
@@ -149,8 +190,12 @@ public class TurnManager {
             if (activeCmd != null) {
                 activeCmd.execute();
                 currentActorIndex++; // Hero đánh xong -> Next
-                changeState(GameState.CHECK_TURN);
-                processNextTurn();
+                if (activeCmd instanceof AttackCommand) {
+                    changeState(GameState.ANIMATING);
+                } else {
+                    changeState(GameState.CHECK_TURN);
+                    processNextTurn();
+                }
             }
         }
     }
@@ -163,7 +208,7 @@ public class TurnManager {
         turnOrder.clear();
         turnOrder.addAll(getAliveHeroes());
         turnOrder.addAll(getAliveMonsters());
-        
+
         // Cách 1: Sort theo Speed từ cao xuống thấp
         Collections.sort(turnOrder, new Comparator<Entity>() {
             @Override
@@ -176,7 +221,8 @@ public class TurnManager {
 
     /**
      * THUẬT TOÁN HONKAI STAR RAIL: Trả về danh sách n nhân vật đánh tiếp theo.
-     * Có khả năng LỌC XÁC CHẾT (Bỏ qua những kẻ isDead() == true) và NHÌN TRƯỚC VÒNG TƯƠNG LAI.
+     * Có khả năng LỌC XÁC CHẾT (Bỏ qua những kẻ isDead() == true) và NHÌN TRƯỚC
+     * VÒNG TƯƠNG LAI.
      */
     public List<Entity> getUpcomingTurns(int count) {
         List<Entity> result = new ArrayList<>();
@@ -185,22 +231,23 @@ public class TurnManager {
         }
 
         int peekIndex = currentActorIndex;
-        
+
         // Quét cho đến khi đủ số lượng count
         while (result.size() < count) {
             if (peekIndex >= turnOrder.size()) {
                 peekIndex = 0; // Vòng lại đầu mảng (mô phỏng vòng đánh tiếp theo)
             }
-            
+
             Entity e = turnOrder.get(peekIndex);
             // Quan trọng: Chỉ đưa người sống vào UI
             if (!e.isDead()) {
                 result.add(e);
             }
             peekIndex++;
-            
+
             // Đề phòng trường hợp tất cả chết hết bị kẹt vòng lặp vô tận
-            if (getAliveHeroes().isEmpty() && getAliveMonsters().isEmpty()) break;
+            if (getAliveHeroes().isEmpty() && getAliveMonsters().isEmpty())
+                break;
         }
         return result;
     }
@@ -208,7 +255,8 @@ public class TurnManager {
     private List<Hero> getAliveHeroes() {
         List<Hero> alive = new ArrayList<>();
         for (Hero h : heroes) {
-            if (!h.isDead()) alive.add(h);
+            if (!h.isDead())
+                alive.add(h);
         }
         return alive;
     }
@@ -216,7 +264,8 @@ public class TurnManager {
     private List<Monster> getAliveMonsters() {
         List<Monster> alive = new ArrayList<>();
         for (Monster m : monsters) {
-            if (!m.isDead()) alive.add(m);
+            if (!m.isDead())
+                alive.add(m);
         }
         return alive;
     }
@@ -234,18 +283,29 @@ public class TurnManager {
     }
 
     // --- Getters ---
-    public GameState getCurrentState() { return currentState; }
-    public int getCurrentWave() { return currentWave; }
-    public List<Hero> getHeroes() { return heroes; }
-    public List<Monster> getMonsters() { return monsters; }
-    
+    public GameState getCurrentState() {
+        return currentState;
+    }
+
+    public int getCurrentWave() {
+        return currentWave;
+    }
+
+    public List<Hero> getHeroes() {
+        return heroes;
+    }
+
+    public List<Monster> getMonsters() {
+        return monsters;
+    }
+
     public Entity getCurrentActor() {
         if (turnOrder == null || turnOrder.isEmpty() || currentActorIndex >= turnOrder.size()) {
             return null;
         }
         return turnOrder.get(currentActorIndex);
     }
-    
+
     public List<RewardFactory.Reward> getCurrentRewards() {
         return currentRewards;
     }

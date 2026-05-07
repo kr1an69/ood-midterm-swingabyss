@@ -37,7 +37,7 @@ import javax.swing.JPanel;
  * - Button click events will eventually dispatch Command objects to the
  * CommandQueue (Command Pattern integration point — stubbed here).
  */
-public class UIPanel extends NineSlicePanel {
+public class UIPanel extends NineSlicePanel implements swingabyss.model.Observer, swingabyss.manager.ITurnListener {
 
     private static final long serialVersionUID = 1L;
 
@@ -58,8 +58,24 @@ public class UIPanel extends NineSlicePanel {
         // Pre-load slot image into Flyweight cache
         slotImage = SpriteLoader.getInstance().loadImage(Constants.UI_SLOT);
 
+        this.turnManager.setTurnListener(this);
+        for (swingabyss.model.Hero h : turnManager.getHeroes())
+            h.addObserver(this);
+        for (swingabyss.model.Monster m : turnManager.getMonsters())
+            m.addObserver(this);
+
         add(buildLeftPanel(), BorderLayout.WEST);
         add(buildRightPanel(), BorderLayout.EAST);
+    }
+
+    @Override
+    public void onNotify(swingabyss.model.Entity entity) {
+        repaint();
+    }
+
+    @Override
+    public void onTurnChange(swingabyss.model.Entity activeActor) {
+        repaint();
     }
 
     // ─────────────────────────────────────────────────────────
@@ -89,11 +105,11 @@ public class UIPanel extends NineSlicePanel {
                 // Load static frame 0 of Hero for UI Avatar placeholder
                 BufferedImage avatar = null;
                 if (actor instanceof swingabyss.model.Hero) {
-                    Constants.SpriteConfig config = Constants.getIdleSpriteConfig(actor.getName(), true);
+                    Constants.EntityRenderConfig config = Constants.getEntityRenderConfig(actor.getName(), true);
                     if (config != null) {
-                        BufferedImage sheet = SpriteLoader.getInstance().loadImage(config.path);
+                        BufferedImage sheet = SpriteLoader.getInstance().loadImage(config.idle.path);
                         if (sheet != null) {
-                            avatar = sheet.getSubimage(0, 0, config.frameWidth, config.frameHeight);
+                            avatar = sheet.getSubimage(0, 0, config.idle.frameWidth, config.idle.frameHeight);
                         }
                     }
                 }
@@ -108,10 +124,21 @@ public class UIPanel extends NineSlicePanel {
                 g2d.setColor(Constants.COLOR_DARK_BROWN);
                 g2d.drawString(actor.getName(), slotX + slotSize + 15, slotY + 20);
 
-                g2d.setFont(new Font("Monospaced", Font.BOLD, 15));
+                g2d.setFont(new Font("Monospaced", Font.BOLD, 14));
                 g2d.setColor(Color.BLACK); // Thống nhất để màu đen cho đơn giản
-                g2d.drawString("HP: " + actor.getCurrentHp() + "/" + actor.getStats().getMaxHp(), slotX + slotSize + 15,
-                        slotY + 40);
+                g2d.drawString(String.format("HP: %d/%d", actor.getCurrentHp(), actor.getStats().getMaxHp()),
+                        slotX + slotSize + 15, slotY + 40);
+
+                int statsY = slotY + 60;
+                if (actor instanceof swingabyss.model.Hero) {
+                    swingabyss.model.Hero h = (swingabyss.model.Hero) actor;
+                    g2d.drawString(String.format("Heal Charges: %d/%d", h.getHealCharges(), h.getMaxHealCharges()),
+                            slotX + slotSize + 15, statsY);
+                    statsY += 20;
+                }
+                g2d.drawString(
+                        String.format("SPD: %d  DEF: %d", actor.getStats().getSpeed(), actor.getStats().getDefense()),
+                        slotX + slotSize + 15, statsY);
             }
         };
         left.setOpaque(false);
@@ -144,7 +171,7 @@ public class UIPanel extends NineSlicePanel {
                     turnManager.pushCommand(new swingabyss.controller.DefendCommand(actor));
                 } else if (idx == 2) {
                     // Heal -> Thực thi luôn
-                    turnManager.pushCommand(new swingabyss.controller.HealCommand((swingabyss.model.Hero)actor));
+                    turnManager.pushCommand(new swingabyss.controller.HealCommand((swingabyss.model.Hero) actor));
                 }
             }));
         }

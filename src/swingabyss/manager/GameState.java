@@ -10,6 +10,7 @@ public enum GameState {
     HERO_ACTION,    // Lượt người chơi, từ giao diện cần đẩy xuống lệnh Action bằng pushCommand
     SELECT_TARGET,  // Chờ người chơi nhấp chuột chọn mục tiêu tấn công
     MONSTER_ACTION, // Máy tính tự điều khiển quái
+    ANIMATING,      // Đang chờ UI chạy xong hiệu ứng hoạt ảnh
     REWARD_PHASE,   // Phần xuất hiện khi quái chết hết, hiện bảng Chọn Phần thưởng (Roguelite)
     GAME_OVER       // Tất cả Hero đã chết
 }
