@@ -109,6 +109,9 @@ public class TurnManager {
                 if (currentActor instanceof Hero) {
                     changeState(GameState.HERO_ACTION);
                     // Dừng ở đây chờ UI gọi pushCommand
+                    if (turnListener != null) {
+                        turnListener.onTurnChange(currentActor);
+                    }
                 } else if (currentActor instanceof Monster) {
                     changeState(GameState.MONSTER_ACTION);
                     processNextTurn(); // Tự động đánh luôn
@@ -140,10 +143,8 @@ public class TurnManager {
                         combatListener.onAttack(activeMonster, target);
                     }
                     attack.execute();
-                    currentActorIndex++;
                     changeState(GameState.ANIMATING);
                 } else {
-                    currentActorIndex++;
                     changeState(GameState.CHECK_TURN);
                     processNextTurn();
                 }
@@ -175,6 +176,7 @@ public class TurnManager {
      */
     public void resumeTurn() {
         if (currentState == GameState.ANIMATING) {
+            currentActorIndex++; // Move index here after animation is done
             changeState(GameState.CHECK_TURN);
             processNextTurn();
         }
@@ -189,10 +191,10 @@ public class TurnManager {
             ICommand activeCmd = commandQueue.poll();
             if (activeCmd != null) {
                 activeCmd.execute();
-                currentActorIndex++; // Hero đánh xong -> Next
                 if (activeCmd instanceof AttackCommand) {
                     changeState(GameState.ANIMATING);
                 } else {
+                    currentActorIndex++; // Hero đánh xong -> Next
                     changeState(GameState.CHECK_TURN);
                     processNextTurn();
                 }

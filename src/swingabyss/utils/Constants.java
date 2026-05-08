@@ -31,7 +31,7 @@ public final class Constants {
     public static final String UI_DEFAULT_FRAME = "/assets/ui/book/default_frame.png";
     public static final String UI_BOOK_PAGE_LEFT = "/assets/ui/book/book_page_left.png";
     public static final String UI_SLOT = "/assets/ui/book/slot.png";
-    public static final String UI_BAR_FRAME = "/assets/ui/book/health_bar_frame.png";
+    public static final String UI_HP_FRAME = "/assets/ui/book/health_bar_frame.png";
     public static final String UI_POINT = "/assets/ui/book/point.png";
     public static final String UI_BAR_FILL = "/assets/ui/book/fill.png";
     public static final String UI_BAR_FILL_RED = "/assets/ui/book/fill_red.png";
@@ -72,13 +72,19 @@ public final class Constants {
         public int hpBarOffsetX;
 
         public EntityRenderConfig(SpriteConfig idle, SpriteConfig attack,
-                                  int iL, int iR, int iT, int iB,
-                                  int aL, int aR, int aT, int aB,
-                                  int hpBarOffsetX) {
+                int iL, int iR, int iT, int iB,
+                int aL, int aR, int aT, int aB,
+                int hpBarOffsetX) {
             this.idle = idle;
             this.attack = attack;
-            this.idleLeft = iL; this.idleRight = iR; this.idleTop = iT; this.idleBottom = iB;
-            this.attackLeft = aL; this.attackRight = aR; this.attackTop = aT; this.attackBottom = aB;
+            this.idleLeft = iL;
+            this.idleRight = iR;
+            this.idleTop = iT;
+            this.idleBottom = iB;
+            this.attackLeft = aL;
+            this.attackRight = aR;
+            this.attackTop = aT;
+            this.attackBottom = aB;
             this.hpBarOffsetX = hpBarOffsetX;
         }
     }
@@ -86,7 +92,7 @@ public final class Constants {
     public static EntityRenderConfig getEntityRenderConfig(String entityName, boolean isHero) {
         String name = entityName.toLowerCase();
         String basePath = isHero ? "/assets/heroes/" + name + "/spritesheets/"
-                                 : "/assets/monsters/" + name + "/spritesheets/";
+                : "/assets/monsters/" + name + "/spritesheets/";
         String idlePath = basePath + "idle_spritesheet.png";
         String attackPath = basePath + "attack_spritesheet.png";
 
@@ -94,82 +100,74 @@ public final class Constants {
             switch (name) {
                 case "knight":
                     return new EntityRenderConfig(
-                        new SpriteConfig(idlePath, 96, 84, 7),
-                        new SpriteConfig(attackPath, 96, 84, 5),
-                        28, 35, 30, 22,
-                        34, 36, 25, 22,
-                        0
-                    );
+                            new SpriteConfig(idlePath, 96, 84, 7),
+                            new SpriteConfig(attackPath, 96, 84, 5),
+                            28, 35, 30, 22,
+                            34, 36, 25, 22,
+                            0);
                 case "magician":
                     return new EntityRenderConfig(
-                        new SpriteConfig(idlePath, 128, 128, 8),
-                        new SpriteConfig(attackPath, 128, 128, 7),
-                        47, 47, 62, 0,
-                        31, 56, 64, 0,
-                        0
-                    );
+                            new SpriteConfig(idlePath, 128, 128, 8),
+                            new SpriteConfig(attackPath, 128, 128, 7),
+                            47, 47, 62, 0,
+                            31, 56, 64, 0,
+                            0);
                 case "swordswoman":
                     return new EntityRenderConfig(
-                        new SpriteConfig(idlePath, 64, 80, 4),
-                        new SpriteConfig(attackPath, 96, 80, 6),
-                        21, 8, 16, 16,
-                        33, 28, 20, 16,
-                        0
-                    );
+                            new SpriteConfig(idlePath, 64, 80, 4),
+                            new SpriteConfig(attackPath, 96, 80, 6),
+                            21, 8, 16, 16,
+                            33, 28, 20, 16,
+                            0);
             }
         } else {
             switch (name) {
                 case "beast":
                     return new EntityRenderConfig(
-                        new SpriteConfig(idlePath, 80, 160, 6),
-                        new SpriteConfig(attackPath, 74, 160, 6),
-                        19, 17, 100, 0,
-                        13, 17, 100, 0,
-                        0
-                    );
+                            new SpriteConfig(idlePath, 80, 160, 6),
+                            new SpriteConfig(attackPath, 74, 160, 6),
+                            19, 17, 100, 0,
+                            13, 17, 100, 0,
+                            0);
                 case "demon":
                     return new EntityRenderConfig(
-                        new SpriteConfig(idlePath, 160, 144, 6),
-                        new SpriteConfig(attackPath, 240, 192, 11),
-                        18, 8, 4, 17,
-                        90, 16, 47, 21,
-                        -15 // Lệch trái do cánh nằm bên trái
+                            new SpriteConfig(idlePath, 160, 144, 6),
+                            new SpriteConfig(attackPath, 240, 192, 11),
+                            18, 8, 4, 17,
+                            90, 16, 47, 21,
+                            -15 // Lệch trái do cánh nằm bên trái
                     );
                 case "dragon":
                     return new EntityRenderConfig(
-                        new SpriteConfig(idlePath, 144, 64, 6),
-                        new SpriteConfig(attackPath, 144, 64, 7),
-                        60, 13, 25, 0,
-                        60, 13, 25, 0,
-                        0
-                    );
+                            new SpriteConfig(idlePath, 144, 64, 6),
+                            new SpriteConfig(attackPath, 144, 64, 7),
+                            60, 13, 25, 0,
+                            60, 13, 25, 0,
+                            0);
                 case "ghost":
                     return new EntityRenderConfig(
-                        new SpriteConfig(idlePath, 64, 80, 7),
-                        new SpriteConfig(attackPath, 64, 80, 4),
-                        20, 20, 19, 19,
-                        20, 20, 19, 19,
-                        0
-                    );
+                            new SpriteConfig(idlePath, 64, 80, 7),
+                            new SpriteConfig(attackPath, 64, 80, 4),
+                            20, 20, 19, 19,
+                            20, 20, 19, 19,
+                            0);
                 case "goblin":
                     // Goblin was measured on the original un-flipped image, but is flipped in game.
                     // So original Left becomes Flipped Right, original Right becomes Flipped Left.
                     // Measured: Idle X 58-59, Attack X 31-56.
                     return new EntityRenderConfig(
-                        new SpriteConfig(idlePath, 150, 150, 4),
-                        new SpriteConfig(attackPath, 150, 150, 8),
-                        59, 58, 65, 49, // x: 59, 58 (swapped from 58-59)
-                        56, 31, 65, 49, // x: 56, 31 (swapped from 31-56)
-                        0
-                    );
+                            new SpriteConfig(idlePath, 150, 150, 4),
+                            new SpriteConfig(attackPath, 150, 150, 8),
+                            59, 58, 65, 49, // x: 59, 58 (swapped from 58-59)
+                            56, 31, 65, 49, // x: 56, 31 (swapped from 31-56)
+                            0);
                 case "ogre":
                     return new EntityRenderConfig(
-                        new SpriteConfig(idlePath, 144, 80, 4),
-                        new SpriteConfig(attackPath, 144, 80, 7),
-                        30, 50, 22, 0,
-                        30, 50, 22, 0,
-                        0
-                    );
+                            new SpriteConfig(idlePath, 144, 80, 4),
+                            new SpriteConfig(attackPath, 144, 80, 7),
+                            30, 50, 22, 0,
+                            30, 50, 22, 0,
+                            0);
             }
         }
         return null;

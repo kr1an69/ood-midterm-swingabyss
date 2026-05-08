@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Random;
 
 public class MonsterFactory {
-    private static final String[] MONSTER_TYPES = {"beast", "demon", "dragon", "ghost", "goblin", "ogre"};
+    private static final String[] MONSTER_TYPES = {"Beast", "Demon", "Dragon", "Ghost", "Goblin", "Ogre"};
     private static final Random RANDOM = new Random();
 
     public static List<Monster> generateWave(int waveTier) {

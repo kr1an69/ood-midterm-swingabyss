@@ -65,6 +65,9 @@ public class GamePanel extends JPanel implements Observer, ICombatListener {
     private Map<Entity, SpriteAnimator> idleAnimators = new HashMap<>();
     private Map<Entity, SpriteAnimator> attackAnimators = new HashMap<>();
     private Map<Entity, SpriteAnimator> currentAnimators = new HashMap<>();
+    
+    // Quản lý VFX đang nổ trên người một Entity (Hit, Heal, Defend)
+    private Map<Entity, SpriteAnimator> vfxAnimators = new HashMap<>();
 
     // HP Bar frame image overlay. Fill is drawn as colored Graphics2D rects (no
     // image needed).
@@ -190,10 +193,34 @@ public class GamePanel extends JPanel implements Observer, ICombatListener {
         SpriteAnimator attackAnim = attackAnimators.get(attacker);
         if (attackAnim != null) {
             currentAnimators.put(attacker, attackAnim);
+            
+            // Theo vfx_constants.md: Hit có 8 frames, size 80x80
+            SpriteAnimator hitVfx = new SpriteAnimator(
+                "/assets/vfx/hit/spritesheets/hit_spritesheet.png",
+                80, 80, 8, 
+                Constants.SPRITE_SCALE, 
+                this::repaint
+            );
+            vfxAnimators.put(target, hitVfx);
+            // Latch Synchronization: Đợi cả Attack và VFX chạy xong mới resumeTurn
+            final int[] pendingAnims = { 2 };
+            Runnable checkResume = () -> {
+                pendingAnims[0]--;
+                if (pendingAnims[0] == 0) {
+                    turnManager.resumeTurn();
+                }
+            };
+
+            hitVfx.playOnce(() -> {
+                vfxAnimators.remove(target); // Xóa khỏi bộ nhớ sau khi nổ xong
+                repaint();
+                checkResume.run();
+            });
+
             attackAnim.playOnce(() -> {
                 currentAnimators.put(attacker, idleAnimators.get(attacker));
                 repaint();
-                turnManager.resumeTurn();
+                checkResume.run();
             });
         } else {
             turnManager.resumeTurn();
@@ -220,7 +247,7 @@ public class GamePanel extends JPanel implements Observer, ICombatListener {
         // HP Bar: only the frame overlay is needed as an image.
         // The fill is drawn as a colored rectangle (the fill .png assets are 1x1px
         // utility files).
-        barFrame = sl.loadImage(Constants.UI_BAR_FRAME);
+        barFrame = sl.loadImage(Constants.UI_HP_FRAME);
         slotImg = sl.loadImage(Constants.UI_SLOT);
         pointImg = sl.loadImage(Constants.UI_POINT);
         descFrameImg = sl.loadImage(Constants.UI_DESCRIPTION_FRAME);
@@ -330,6 +357,28 @@ public class GamePanel extends JPanel implements Observer, ICombatListener {
         // ── 8. Reward Phase ─────────────────────────────────
         if (turnManager.getCurrentState() == GameState.REWARD_PHASE) {
             drawRewardPhase(g2d, W, H);
+        }
+
+        // ── 9. VFX Layer ────────────────────────────────────
+        for (Map.Entry<Entity, SpriteAnimator> entry : vfxAnimators.entrySet()) {
+            Entity target = entry.getKey();
+            SpriteAnimator vfxAnim = entry.getValue();
+            
+            // Theo vfx_constants.md: "pivot cứ lấy làm trung tâm của size 1 frame"
+            HitboxRecord record = getHitboxRecord(target);
+            if (record != null && vfxAnim.getCurrentFrame() != null) {
+                BufferedImage frame = vfxAnim.getCurrentFrame();
+                
+                // Tâm của Hitbox
+                int centerX = record.bounds.x + record.bounds.width / 2;
+                int centerY = record.bounds.y + record.bounds.height / 2;
+                
+                // Tính toán tọa độ vẽ để tâm của VFX trùng với tâm Hitbox
+                int vfxX = centerX - vfxAnim.getFrameWidth() / 2;
+                int vfxY = centerY - vfxAnim.getFrameHeight() / 2;
+                
+                g2d.drawImage(frame, vfxX, vfxY, null);
+            }
         }
     }
 
@@ -639,9 +688,14 @@ public class GamePanel extends JPanel implements Observer, ICombatListener {
         if (currentActor != null && currentActor instanceof Hero && !currentActor.isDead()) {
             HitboxRecord record = getHitboxRecord(currentActor);
             if (record != null && pointImg != null) {
-                int px = record.spriteX + (record.spriteW - pointImg.getWidth()) / 2;
-                int py = record.spriteY - pointImg.getHeight() - 35; // Dùng chiều cao ảnh để đẩy lên hẳn tên
-                g2d.drawImage(pointImg, px, py, null);
+                Constants.EntityRenderConfig config = Constants.getEntityRenderConfig(currentActor.getName(), true);
+                int pW = (int)(pointImg.getWidth() * 1.5);
+                int pH = (int)(pointImg.getHeight() * 1.5);
+                int offset = (config != null) ? config.hpBarOffsetX : 0;
+                
+                int px = record.spriteX + record.spriteW / 2 + offset - pW / 2;
+                int py = record.spriteY - pH - 45; // Đẩy lên cao hơn hẳn tên
+                g2d.drawImage(pointImg, px, py, pW, pH, null);
             }
         }
 
@@ -652,9 +706,14 @@ public class GamePanel extends JPanel implements Observer, ICombatListener {
                 if (turnManager.getCurrentState() == GameState.SELECT_TARGET) {
                     // Trạng thái ngắm bắn -> Vẽ Point lơ lửng (tĩnh, không nảy)
                     if (pointImg != null) {
-                        int px = record.spriteX + (record.spriteW - pointImg.getWidth()) / 2;
-                        int py = record.spriteY - pointImg.getHeight() - 35;
-                        g2d.drawImage(pointImg, px, py, null);
+                        Constants.EntityRenderConfig config = Constants.getEntityRenderConfig(hoveredEntity.getName(), false);
+                        int pW = (int)(pointImg.getWidth() * 1.5);
+                        int pH = (int)(pointImg.getHeight() * 1.5);
+                        int offset = (config != null) ? config.hpBarOffsetX : 0;
+                        
+                        int px = record.spriteX + record.spriteW / 2 + offset - pW / 2;
+                        int py = record.spriteY - pH - 45;
+                        g2d.drawImage(pointImg, px, py, pW, pH, null);
                     }
                 } else {
                     // Trạng thái khác -> Hiển thị Tooltip Info góc PHẢI trên
