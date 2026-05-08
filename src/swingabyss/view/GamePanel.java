@@ -657,17 +657,50 @@ public class GamePanel extends JPanel implements Observer, ICombatListener {
             if (e instanceof Hero) {
                 g2d.setColor(new Color(0, 100, 255, 60));
             } else {
-                g2d.setColor(new Color(255, 0, 0, 60));
+                g2d.setColor(new Color(255, 120, 120, 40));
             }
             g2d.fillRect(startX + 2, y + 2, slotSize - 4, slotSize - 4);
 
-            // Draw full avatar (static frame 0)
-            SpriteAnimator anim = getAnimator(e);
-            BufferedImage avatar = anim != null ? anim.getFrame(0) : null;
-            if (avatar != null) {
-                int pad = 4;
-                g2d.drawImage(avatar,
-                        startX + pad, y + pad, slotSize - pad * 2, slotSize - pad * 2, null);
+            // Draw cropped avatar (ẢNH TĨNH frame 0 từ sheet, không dùng Animator)
+            boolean isHeroEntity = e instanceof Hero;
+            Constants.EntityRenderConfig cfg = Constants.getEntityRenderConfig(e.getName(), isHeroEntity);
+            if (cfg == null) cfg = Constants.getEntityRenderConfig(isHeroEntity ? "knight" : "demon", isHeroEntity);
+
+            if (cfg != null) {
+                BufferedImage sheet = SpriteLoader.getInstance().loadImage(cfg.idle.path);
+                if (sheet != null) {
+                    // Vùng "thịt" thật sự (loại bỏ margin trong suốt)
+                    int cropX = cfg.idleLeft;
+                    int cropY = cfg.idleTop;
+                    int cropW = cfg.idle.frameWidth - cfg.idleLeft - cfg.idleRight;
+                    int cropH = cfg.idle.frameHeight - cfg.idleTop - cfg.idleBottom;
+
+                    int pad = 4;
+                    int drawSize = slotSize - pad * 2;
+
+                    // Fit-to-slot giữ tỉ lệ
+                    float fitScale = Math.min((float) drawSize / cropW, (float) drawSize / cropH);
+                    int drawW = (int) (cropW * fitScale);
+                    int drawH = (int) (cropH * fitScale);
+                    int offsetX = (drawSize - drawW) / 2;
+                    int offsetY = (drawSize - drawH) / 2;
+
+                    int dx1 = startX + pad + offsetX;
+                    int dy1 = y + pad + offsetY;
+                    int dx2 = dx1 + drawW;
+                    int dy2 = dy1 + drawH;
+
+                    // Flip Goblin (hoán đổi dx1/dx2 để mirror ngang)
+                    boolean shouldFlip = e.getName().equalsIgnoreCase("goblin");
+                    if (shouldFlip) {
+                        int tmp = dx1; dx1 = dx2; dx2 = tmp;
+                    }
+
+                    g2d.drawImage(sheet,
+                            dx1, dy1, dx2, dy2,
+                            cropX, cropY, cropX + cropW, cropY + cropH,
+                            null);
+                }
             }
 
             // Highlight current turn

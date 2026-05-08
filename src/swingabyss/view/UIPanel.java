@@ -102,21 +102,43 @@ public class UIPanel extends NineSlicePanel implements swingabyss.model.Observer
                     g2d.drawImage(slotImage, slotX, slotY, slotSize, slotSize, null);
                 }
 
-                // Load static frame 0 of Hero for UI Avatar placeholder
-                BufferedImage avatar = null;
-                if (actor instanceof swingabyss.model.Hero) {
-                    Constants.EntityRenderConfig config = Constants.getEntityRenderConfig(actor.getName(), true);
-                    if (config != null) {
-                        BufferedImage sheet = SpriteLoader.getInstance().loadImage(config.idle.path);
-                        if (sheet != null) {
-                            avatar = sheet.getSubimage(0, 0, config.idle.frameWidth, config.idle.frameHeight);
-                        }
-                    }
-                }
+                // Load static frame 0 (Hero hoặc Monster) — crop margin + fit-to-slot
+                boolean isHero = actor instanceof swingabyss.model.Hero;
+                Constants.EntityRenderConfig config = Constants.getEntityRenderConfig(actor.getName(), isHero);
+                if (config != null) {
+                    BufferedImage sheet = SpriteLoader.getInstance().loadImage(config.idle.path);
+                    if (sheet != null) {
+                        int cropX = config.idleLeft;
+                        int cropY = config.idleTop;
+                        int cropW = config.idle.frameWidth - config.idleLeft - config.idleRight;
+                        int cropH = config.idle.frameHeight - config.idleTop - config.idleBottom;
 
-                if (avatar != null) {
-                    int pad = 4;
-                    g2d.drawImage(avatar, slotX + pad, slotY + pad, slotSize - pad * 2, slotSize - pad * 2, null);
+                        int pad = 4;
+                        int drawSize = slotSize - pad * 2;
+
+                        // Fit-to-slot giữ tỉ lệ
+                        float fitScale = Math.min((float) drawSize / cropW, (float) drawSize / cropH);
+                        int drawW = (int) (cropW * fitScale);
+                        int drawH = (int) (cropH * fitScale);
+                        int offsetX = (drawSize - drawW) / 2;
+                        int offsetY = (drawSize - drawH) / 2;
+
+                        int dx1 = slotX + pad + offsetX;
+                        int dy1 = slotY + pad + offsetY;
+                        int dx2 = dx1 + drawW;
+                        int dy2 = dy1 + drawH;
+
+                        // Flip Goblin (hoán đổi dx1/dx2 để mirror ngang)
+                        boolean shouldFlip = actor.getName().equalsIgnoreCase("goblin");
+                        if (shouldFlip) {
+                            int tmp = dx1; dx1 = dx2; dx2 = tmp;
+                        }
+
+                        g2d.drawImage(sheet,
+                                dx1, dy1, dx2, dy2,
+                                cropX, cropY, cropX + cropW, cropY + cropH,
+                                null);
+                    }
                 }
 
                 // Draw Name and Stats

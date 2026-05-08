@@ -102,7 +102,7 @@ public final class Constants {
                     return new EntityRenderConfig(
                             new SpriteConfig(idlePath, 96, 84, 7),
                             new SpriteConfig(attackPath, 96, 84, 5),
-                            28, 35, 30, 22,
+                            28, 35, 20, 22,
                             34, 36, 25, 22,
                             0);
                 case "magician":
