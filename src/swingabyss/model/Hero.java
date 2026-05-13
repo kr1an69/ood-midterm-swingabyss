@@ -12,7 +12,7 @@ public class Hero extends Entity {
     private List<ISkill> skills;
 
     // Trạng thái kỹ năng hồi máu (Charge)
-    private int healCharges = 5;
+    private int healCharges = 3;
     private int maxHealCharges = 10;
 
     public Hero(String name, Stats stats) {
@@ -51,5 +51,9 @@ public class Hero extends Entity {
     public void addMaxHealCharges(int amount) {
         maxHealCharges += amount;
         healCharges += amount;
+    }
+
+    public void resetHealCharges() {
+        this.healCharges = 3;
     }
 }

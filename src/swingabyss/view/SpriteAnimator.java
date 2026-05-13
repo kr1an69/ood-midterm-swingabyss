@@ -65,6 +65,16 @@ public class SpriteAnimator {
     }
 
     /**
+     * Thay đổi thời gian delay giữa các frames cho riêng Animator này.
+     * @param ms thời gian tính bằng millisecond
+     */
+    public void setDelay(int ms) {
+        if (this.timer != null) {
+            this.timer.setDelay(ms);
+        }
+    }
+
+    /**
      * Creates a SpriteAnimator that loads its frames from a directory of separate images.
      *
      * @param folderPath  classpath path to the folder containing frames (e.g. "/assets/monsters/demon/sprites/idle")

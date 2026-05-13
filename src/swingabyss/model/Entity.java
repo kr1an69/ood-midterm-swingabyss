@@ -14,6 +14,8 @@ public abstract class Entity implements IEntity {
     // Sử dụng Composition: Đưa toàn bộ chỉ số tĩnh vào class Stats
     protected Stats stats;
     
+    protected boolean isDefending = false;
+    
     // Danh sách các đối tượng quan sát sự thay đổi của thực thể này
     protected List<Observer> observers;
     
@@ -88,5 +90,13 @@ public abstract class Entity implements IEntity {
 
     public Stats getStats() {
         return stats;
+    }
+
+    public boolean isDefending() {
+        return isDefending;
+    }
+
+    public void setDefending(boolean defending) {
+        this.isDefending = defending;
     }
 }

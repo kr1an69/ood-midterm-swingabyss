@@ -103,6 +103,7 @@ public class TurnManager {
                 // Reset giáp phòng thủ (buff từ DefendCommand lượt trước của người này)
                 currentActor.getStats().setDefense(currentActor.getStats().getDefense() % 10); // Logic tạm, thực tế cần
                                                                                                // biến gốc
+                currentActor.setDefending(false);
 
                 // Quyết định ai đánh
                 System.out.println("[FSM] Tới lượt của: " + currentActor.getName());
@@ -164,11 +165,36 @@ public class TurnManager {
         }
     }
 
+    private Runnable onGameOverCallback;
+
+    public void setOnGameOverCallback(Runnable onGameOverCallback) {
+        this.onGameOverCallback = onGameOverCallback;
+    }
+
     /**
      * Dùng để chuyển trạng thái FSM một cách an toàn.
      */
     public void changeState(GameState s) {
         this.currentState = s;
+        if (s == GameState.GAME_OVER) {
+            if (turnListener != null) turnListener.onGameOver();
+            if (onGameOverCallback != null) onGameOverCallback.run();
+        }
+    }
+
+    /**
+     * Khởi tạo lại trò chơi. Hồi sinh Heroes và làm trống Monsters.
+     */
+    public void resetGame() {
+        this.currentWave = 1;
+        for (Hero h : heroes) {
+            h.heal(9999);
+            h.resetHealCharges();
+        }
+        this.monsters.clear();
+        this.turnOrder.clear();
+        this.commandQueue.clear();
+        changeState(GameState.MAIN_MENU);
     }
 
     /**
@@ -190,8 +216,16 @@ public class TurnManager {
             commandQueue.offer(cmd);
             ICommand activeCmd = commandQueue.poll();
             if (activeCmd != null) {
+                if (activeCmd instanceof swingabyss.controller.HealCommand) {
+                    if (combatListener != null) combatListener.onHeal(getCurrentActor());
+                } else if (activeCmd instanceof swingabyss.controller.DefendCommand) {
+                    if (combatListener != null) combatListener.onDefend(getCurrentActor());
+                }
+
                 activeCmd.execute();
-                if (activeCmd instanceof AttackCommand) {
+                if (activeCmd instanceof AttackCommand || 
+                    activeCmd instanceof swingabyss.controller.HealCommand || 
+                    activeCmd instanceof swingabyss.controller.DefendCommand) {
                     changeState(GameState.ANIMATING);
                 } else {
                     currentActorIndex++; // Hero đánh xong -> Next

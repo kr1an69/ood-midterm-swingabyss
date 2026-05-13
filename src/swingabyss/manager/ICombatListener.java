@@ -8,4 +8,6 @@ import swingabyss.model.Entity;
  */
 public interface ICombatListener {
     void onAttack(Entity attacker, Entity target);
+    void onHeal(Entity target);
+    void onDefend(Entity target);
 }

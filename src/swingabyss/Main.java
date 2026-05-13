@@ -18,7 +18,7 @@ public class Main {
             // Khởi tạo FSM Manager (Monsters sẽ được sinh bởi MonsterFactory)
             List<swingabyss.model.Monster> emptyMonsters = new ArrayList<>();
             swingabyss.manager.TurnManager turnManager = new swingabyss.manager.TurnManager(heroes, emptyMonsters);
-            turnManager.startGame(); // Start the first wave
+            // turnManager.startGame(); // Dời vào MainMenuPanel
 
             // Inject dependency vào View
             MainFrame frame = new MainFrame(turnManager);

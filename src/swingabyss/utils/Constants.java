@@ -192,7 +192,30 @@ public final class Constants {
     // ANIMATION TIMING
     // ──────────────────────────────────────────
     /** Milliseconds between sprite frames */
-    public static final int ANIM_DELAY_MS = 180;
+    public static final int ANIM_DELAY_MS = 130;
+
+    // ──────────────────────────────────────────
+    // VFX CONFIGS
+    // ──────────────────────────────────────────
+    public static class VfxConfig {
+        public String path;
+        public int frameWidth;
+        public int frameHeight;
+        public int frameCount;
+
+        public VfxConfig(String path, int frameWidth, int frameHeight, int frameCount) {
+            this.path = path;
+            this.frameWidth = frameWidth;
+            this.frameHeight = frameHeight;
+            this.frameCount = frameCount;
+        }
+    }
+
+    public static final VfxConfig VFX_HIT = new VfxConfig("/assets/vfx/hit/spritesheets/hit_spritesheet.png", 80, 80, 8);
+    public static final VfxConfig VFX_BREAK = new VfxConfig("/assets/vfx/break/spritesheets/break_spritesheet.png", 48, 48, 10);
+    public static final VfxConfig VFX_DEATH = new VfxConfig("/assets/vfx/death/spritesheets/death_spritesheet.png", 48, 48, 8);
+    public static final VfxConfig VFX_DEFENSE = new VfxConfig("/assets/vfx/defense/spritesheets/defense_spritesheet.png", 64, 64, 18);
+    public static final VfxConfig VFX_HEAL = new VfxConfig("/assets/vfx/heal/spritesheets/heal_spritesheet.png", 64, 64, 16);
 
     // ──────────────────────────────────────────
     // 9-SLICE INSETS (top, left, bottom, right pixels in the SOURCE image)

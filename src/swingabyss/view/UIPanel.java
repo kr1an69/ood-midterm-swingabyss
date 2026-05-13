@@ -49,6 +49,9 @@ public class UIPanel extends NineSlicePanel implements swingabyss.model.Observer
     private final BufferedImage slotImage;
     private TurnManager turnManager;
 
+    private String warningMessage = "";
+    private javax.swing.Timer warningTimer;
+
     public UIPanel(TurnManager turnManager) {
         // Use the Book Cover parchment frame for the panel background
         super(Constants.UI_DEFAULT_FRAME, Constants.INSETS_BOOK_COVER);
@@ -76,6 +79,11 @@ public class UIPanel extends NineSlicePanel implements swingabyss.model.Observer
     @Override
     public void onTurnChange(swingabyss.model.Entity activeActor) {
         repaint();
+    }
+
+    @Override
+    public void onGameOver() {
+        // Nothing special for UIPanel, MainFrame handles it
     }
 
     // ─────────────────────────────────────────────────────────
@@ -131,7 +139,9 @@ public class UIPanel extends NineSlicePanel implements swingabyss.model.Observer
                         // Flip Goblin (hoán đổi dx1/dx2 để mirror ngang)
                         boolean shouldFlip = actor.getName().equalsIgnoreCase("goblin");
                         if (shouldFlip) {
-                            int tmp = dx1; dx1 = dx2; dx2 = tmp;
+                            int tmp = dx1;
+                            dx1 = dx2;
+                            dx2 = tmp;
                         }
 
                         g2d.drawImage(sheet,
@@ -172,7 +182,36 @@ public class UIPanel extends NineSlicePanel implements swingabyss.model.Observer
     // RIGHT PANEL (Action Buttons)
     // ─────────────────────────────────────────────────────────
     private JPanel buildRightPanel() {
-        JPanel right = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 15, 18));
+        JPanel right = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 15, 18)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (warningMessage != null && !warningMessage.isEmpty()) {
+                    Graphics2D g2d = (Graphics2D) g;
+                    g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                    g2d.setFont(new Font("Monospaced", Font.BOLD, 16)); // Font to hơn một chút
+                    
+                    FontMetrics fm = g2d.getFontMetrics();
+                    int textWidth = fm.stringWidth(warningMessage);
+                    int x = getWidth() - textWidth - 15;
+                    int y = getHeight() - 6;
+
+                    // Vẽ viền đen (Outline)
+                    g2d.setColor(Color.BLACK);
+                    for (int dx = -1; dx <= 1; dx++) {
+                        for (int dy = -1; dy <= 1; dy++) {
+                            if (dx != 0 || dy != 0) {
+                                g2d.drawString(warningMessage, x + dx, y + dy);
+                            }
+                        }
+                    }
+
+                    // Vẽ chữ chính màu đỏ
+                    g2d.setColor(new Color(255, 60, 60));
+                    g2d.drawString(warningMessage, x, y);
+                }
+            }
+        };
         right.setOpaque(false);
         right.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 15));
 
@@ -192,8 +231,25 @@ public class UIPanel extends NineSlicePanel implements swingabyss.model.Observer
                     // Defend -> Thực thi luôn
                     turnManager.pushCommand(new swingabyss.controller.DefendCommand(actor));
                 } else if (idx == 2) {
-                    // Heal -> Thực thi luôn
-                    turnManager.pushCommand(new swingabyss.controller.HealCommand((swingabyss.model.Hero) actor));
+                    // Heal -> Check charges first
+                    swingabyss.model.Hero hero = (swingabyss.model.Hero) actor;
+                    if (hero.getHealCharges() <= 0) {
+                        warningMessage = "Hết số lần Hồi máu!";
+                        right.repaint();
+                        
+                        if (warningTimer != null && warningTimer.isRunning()) {
+                            warningTimer.restart();
+                        } else {
+                            warningTimer = new javax.swing.Timer(1500, e -> {
+                                warningMessage = "";
+                                right.repaint();
+                            });
+                            warningTimer.setRepeats(false);
+                            warningTimer.start();
+                        }
+                        return; // Block command
+                    }
+                    turnManager.pushCommand(new swingabyss.controller.HealCommand(hero));
                 }
             }));
         }

@@ -8,4 +8,9 @@ import swingabyss.model.Entity;
  */
 public interface ITurnListener {
     void onTurnChange(Entity activeActor);
+    
+    /**
+     * Kích hoạt khi tất cả Hero đã chết.
+     */
+    void onGameOver();
 }

@@ -194,20 +194,38 @@ public class GamePanel extends JPanel implements Observer, ICombatListener {
         if (attackAnim != null) {
             currentAnimators.put(attacker, attackAnim);
             
-            // Theo vfx_constants.md: Hit có 8 frames, size 80x80
+            Constants.VfxConfig hitConfig = target.isDefending() ? Constants.VFX_BREAK : Constants.VFX_HIT;
             SpriteAnimator hitVfx = new SpriteAnimator(
-                "/assets/vfx/hit/spritesheets/hit_spritesheet.png",
-                80, 80, 8, 
+                hitConfig.path,
+                hitConfig.frameWidth, hitConfig.frameHeight, hitConfig.frameCount, 
                 Constants.SPRITE_SCALE, 
                 this::repaint
             );
             vfxAnimators.put(target, hitVfx);
+            
             // Latch Synchronization: Đợi cả Attack và VFX chạy xong mới resumeTurn
             final int[] pendingAnims = { 2 };
             Runnable checkResume = () -> {
                 pendingAnims[0]--;
                 if (pendingAnims[0] == 0) {
-                    turnManager.resumeTurn();
+                    if (target.isDead()) {
+                        Constants.VfxConfig deathConfig = Constants.VFX_DEATH;
+                        SpriteAnimator deathVfx = new SpriteAnimator(
+                            deathConfig.path,
+                            deathConfig.frameWidth, deathConfig.frameHeight, deathConfig.frameCount, 
+                            Constants.SPRITE_SCALE * 2, 
+                            this::repaint
+                        );
+                        deathVfx.setDelay(80);
+                        vfxAnimators.put(target, deathVfx);
+                        deathVfx.playOnce(() -> {
+                            vfxAnimators.remove(target);
+                            repaint();
+                            turnManager.resumeTurn();
+                        });
+                    } else {
+                        turnManager.resumeTurn();
+                    }
                 }
             };
 
@@ -225,6 +243,42 @@ public class GamePanel extends JPanel implements Observer, ICombatListener {
         } else {
             turnManager.resumeTurn();
         }
+    }
+
+    @Override
+    public void onHeal(Entity target) {
+        Constants.VfxConfig healConfig = Constants.VFX_HEAL;
+        SpriteAnimator healVfx = new SpriteAnimator(
+            healConfig.path,
+            healConfig.frameWidth, healConfig.frameHeight, healConfig.frameCount, 
+            Constants.SPRITE_SCALE, 
+            this::repaint
+        );
+        healVfx.setDelay(60);
+        vfxAnimators.put(target, healVfx);
+        healVfx.playOnce(() -> {
+            vfxAnimators.remove(target);
+            repaint();
+            turnManager.resumeTurn();
+        });
+    }
+
+    @Override
+    public void onDefend(Entity target) {
+        Constants.VfxConfig defendConfig = Constants.VFX_DEFENSE;
+        SpriteAnimator defendVfx = new SpriteAnimator(
+            defendConfig.path,
+            defendConfig.frameWidth, defendConfig.frameHeight, defendConfig.frameCount, 
+            Constants.SPRITE_SCALE, 
+            this::repaint
+        );
+        defendVfx.setDelay(60);
+        vfxAnimators.put(target, defendVfx);
+        defendVfx.playOnce(() -> {
+            vfxAnimators.remove(target);
+            repaint();
+            turnManager.resumeTurn();
+        });
     }
 
     // ─────────────────────────────────────────────────────────
@@ -327,10 +381,11 @@ public class GamePanel extends JPanel implements Observer, ICombatListener {
         List<Hero> heroes = turnManager.getHeroes();
         for (int i = 0; i < heroes.size(); i++) {
             Hero h = heroes.get(i);
-            if (!h.isDead()) {
+            boolean hasVfx = vfxAnimators.containsKey(h);
+            if (!h.isDead() || hasVfx) {
                 int groundX = 150 + i * 140;
                 SpriteAnimator anim = getAnimator(h);
-                drawEntity(g2d, anim, groundX, groundY, h);
+                drawEntity(g2d, anim, groundX, groundY, h, !h.isDead());
             }
         }
 
@@ -338,10 +393,11 @@ public class GamePanel extends JPanel implements Observer, ICombatListener {
         List<Monster> monsters = turnManager.getMonsters();
         for (int i = 0; i < monsters.size(); i++) {
             Monster m = monsters.get(i);
-            if (!m.isDead()) {
+            boolean hasVfx = vfxAnimators.containsKey(m);
+            if (!m.isDead() || hasVfx) {
                 int groundX = W - 150 - i * 140;
                 SpriteAnimator anim = getAnimator(m);
-                drawEntity(g2d, anim, groundX, groundY, m);
+                drawEntity(g2d, anim, groundX, groundY, m, !m.isDead());
             }
         }
 
@@ -469,7 +525,7 @@ public class GamePanel extends JPanel implements Observer, ICombatListener {
      * @param groundY  vertical position of the ground (feet contact)
      */
     private void drawEntity(Graphics2D g2d, SpriteAnimator animator,
-            int groundX, int groundY, Entity e) {
+            int groundX, int groundY, Entity e, boolean drawVisuals) {
         BufferedImage frame = animator.getCurrentFrame();
 
         boolean isHero = e instanceof Hero;
@@ -499,6 +555,8 @@ public class GamePanel extends JPanel implements Observer, ICombatListener {
         int hitX = groundX - idleHitW / 2;
         int hitY = groundY - idleHitH;
         entityHitboxes.add(new HitboxRecord(e, new Rectangle(hitX, hitY, idleHitW, idleHitH), hitX, hitY, idleHitW));
+
+        if (!drawVisuals) return;
 
         // Draw sprite — mirror horizontally for flipped entities (monsters)
         if (animator.isFlipped()) {

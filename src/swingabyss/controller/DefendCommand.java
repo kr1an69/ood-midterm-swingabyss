@@ -20,6 +20,7 @@ public class DefendCommand implements ICommand {
             System.out.println("[CMD] " + defender.getName() + " vao the phong thu!");
             int currentDef = defender.getStats().getDefense();
             defender.getStats().setDefense(currentDef + defenseBuffAmount);
+            defender.setDefending(true);
             // Lưu ý: Cần có cơ chế reset defense sau mỗi đợt hoặc lượt (sẽ xử lý ở TurnManager)
         }
     }
