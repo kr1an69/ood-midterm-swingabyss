@@ -18,17 +18,17 @@ import javax.imageio.ImageIO;
  *
  * Design Patterns:
  * ┌─────────────────────────────────────────────────────────┐
- * │  SINGLETON: Only one SpriteLoader instance ever exists. │
- * │  FLYWEIGHT: Images loaded from disk are cached by path. │
- * │             Subsequent requests reuse the same object   │
- * │             reference — no re-reading from disk.        │
+ * │ SINGLETON: Only one SpriteLoader instance ever exists. │
+ * │ FLYWEIGHT: Images loaded from disk are cached by path. │
+ * │ Subsequent requests reuse the same object │
+ * │ reference — no re-reading from disk. │
  * └─────────────────────────────────────────────────────────┘
  *
  * Key algorithm — Nearest-Neighbor Scaling:
- *   Java's default getScaledInstance() uses bilinear interpolation,
- *   which blurs pixel art. We use AffineTransformOp with
- *   TYPE_NEAREST_NEIGHBOR to keep each pixel sharp when
- *   scaling up spritesheets by SPRITE_SCALE factor.
+ * Java's default getScaledInstance() uses bilinear interpolation,
+ * which blurs pixel art. We use AffineTransformOp with
+ * TYPE_NEAREST_NEIGHBOR to keep each pixel sharp when
+ * scaling up spritesheets by SPRITE_SCALE factor.
  */
 public class SpriteLoader {
 
@@ -39,7 +39,8 @@ public class SpriteLoader {
     private final Map<String, BufferedImage> cache = new HashMap<>();
 
     /** Private constructor enforces Singleton pattern. */
-    private SpriteLoader() {}
+    private SpriteLoader() {
+    }
 
     /**
      * Returns the sole SpriteLoader instance (lazy initialization).
@@ -97,7 +98,7 @@ public class SpriteLoader {
             img = makePlaceholder(32, 32);
         }
 
-        cache.put(path, img);  // Cache for Flyweight reuse
+        cache.put(path, img); // Cache for Flyweight reuse
         return img;
     }
 
@@ -105,18 +106,18 @@ public class SpriteLoader {
      * Extracts a sub-image (single frame) from a spritesheet.
      * The result is NOT cached separately — callers hold their own reference.
      *
-     * @param sheet    the full spritesheet BufferedImage
-     * @param x        left edge of the frame in pixels
-     * @param y        top edge of the frame in pixels
-     * @param w        frame width in pixels
-     * @param h        frame height in pixels
-     * @return         a new BufferedImage representing a single frame
+     * @param sheet the full spritesheet BufferedImage
+     * @param x     left edge of the frame in pixels
+     * @param y     top edge of the frame in pixels
+     * @param w     frame width in pixels
+     * @param h     frame height in pixels
+     * @return a new BufferedImage representing a single frame
      */
     public BufferedImage getSubImage(BufferedImage sheet, int x, int y, int w, int h) {
         // Clamp to prevent ArrayIndexOutOfBounds on mis-configured frames
-        int safeX = Math.min(x, sheet.getWidth()  - 1);
+        int safeX = Math.min(x, sheet.getWidth() - 1);
         int safeY = Math.min(y, sheet.getHeight() - 1);
-        int safeW = Math.min(w, sheet.getWidth()  - safeX);
+        int safeW = Math.min(w, sheet.getWidth() - safeX);
         int safeH = Math.min(h, sheet.getHeight() - safeY);
         return sheet.getSubimage(safeX, safeY, safeW, safeH);
     }
@@ -125,18 +126,18 @@ public class SpriteLoader {
      * Scales a BufferedImage using the Nearest-Neighbor algorithm.
      *
      * Why Nearest-Neighbor?
-     *   Pixel art consists of deliberate, hard-edged pixels.
-     *   Bilinear/bicubic interpolation blends neighbouring pixels,
-     *   producing a blurry result at 2× or 3× scale.
-     *   Nearest-Neighbor maps each output pixel to the closest input
-     *   pixel with no blending — preserving the crisp pixel aesthetic.
+     * Pixel art consists of deliberate, hard-edged pixels.
+     * Bilinear/bicubic interpolation blends neighbouring pixels,
+     * producing a blurry result at 2× or 3× scale.
+     * Nearest-Neighbor maps each output pixel to the closest input
+     * pixel with no blending — preserving the crisp pixel aesthetic.
      *
-     * @param source  original (small) image
-     * @param scale   integer scale factor (e.g. 2 for 2×)
-     * @return        new scaled image, same type as source
+     * @param source original (small) image
+     * @param scale  integer scale factor (e.g. 2 for 2×)
+     * @return new scaled image, same type as source
      */
     public BufferedImage getScaledPixel(BufferedImage source, int scale) {
-        int newW = source.getWidth()  * scale;
+        int newW = source.getWidth() * scale;
         int newH = source.getHeight() * scale;
 
         BufferedImage scaled = new BufferedImage(newW, newH, BufferedImage.TYPE_INT_ARGB);
@@ -160,10 +161,10 @@ public class SpriteLoader {
      * @param frameH      height of each frame (un-scaled pixels)
      * @param totalFrames number of frames to extract (horizontal strip)
      * @param scale       integer scale factor for output frames
-     * @return            array of scaled frame images
+     * @return array of scaled frame images
      */
     public BufferedImage[] loadFrames(String path, int frameW, int frameH,
-                                      int totalFrames, int scale) {
+            int totalFrames, int scale) {
         BufferedImage sheet = loadImage(path);
         BufferedImage[] frames = new BufferedImage[totalFrames];
         for (int i = 0; i < totalFrames; i++) {
@@ -179,8 +180,8 @@ public class SpriteLoader {
      */
     public BufferedImage[] loadFramesFromFolder(String folderPath, int scale) {
         String filePath = folderPath.startsWith("/") ? folderPath.substring(1) : folderPath;
-        File folder = new File(filePath);
-        
+        File folder = new File("res/" + filePath);
+
         if (!folder.exists() || !folder.isDirectory()) {
             System.err.println("[SpriteLoader] Folder not found: " + folderPath);
             return new BufferedImage[] { makePlaceholder(32, 32) };
@@ -192,7 +193,8 @@ public class SpriteLoader {
             return new BufferedImage[] { makePlaceholder(32, 32) };
         }
 
-        // Custom comparator to sort files like frame1.png, frame2.png, frame10.png correctly
+        // Custom comparator to sort files like frame1.png, frame2.png, frame10.png
+        // correctly
         java.util.Arrays.sort(files, (f1, f2) -> {
             String n1 = f1.getName().replaceAll("\\D", ""); // Extract numbers
             String n2 = f2.getName().replaceAll("\\D", "");
